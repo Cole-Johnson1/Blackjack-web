@@ -1,0 +1,36 @@
+{
+  "Bob": {
+    "name": "Bob",
+    "balance": 1025,
+    "wins": 2,
+    "losses": 4,
+    "pushes": 0,
+    "gamesPlayed": 6,
+    "totalEarnings": 50,
+    "lastDailyClaim": 1780264351425
+  },
+  "NotColeJohnson": {
+    "name": "NotColeJohnson",
+    "balance": 1200,
+    "wins": 8,
+    "losses": 14,
+    "pushes": 0,
+    "gamesPlayed": 22,
+    "totalEarnings": 200,
+    "lastDailyClaim": 1780873667988,
+    "runsCompleted": 1,
+    "highestChapter": 2
+  },
+  "admin": {
+    "name": "admin",
+    "balance": 1050,
+    "wins": 0,
+    "losses": 2,
+    "pushes": 0,
+    "gamesPlayed": 2,
+    "totalEarnings": 100,
+    "lastDailyClaim": 1780266981546,
+    "runsCompleted": 0,
+    "highestChapter": 1
+  }
+}

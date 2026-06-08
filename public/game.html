@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmackJack</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+</head>
+<body class="page page-game">
+    <main class="shell game-shell pixel-shell">
+
+        <section class="card game-header pixel-panel">
+            <p class="eyebrow" id="modeLabel"></p>
+            <h1>SmackJack</h1>
+            <p id="tableStatus" class="subtle">Waiting for host to deal.</p>
+            <p id="roundBanner" class="message" hidden></p>
+            <p class="subtle">Room: <strong id="roomCodeText">-</strong></p>
+            <p id="gameMessage" class="message" hidden></p>
+        </section>
+
+        <section id="battleBar" class="card battle-bar pixel-panel">
+            <div class="battle-bar-inner">
+                <div id="battleP1" class="battle-side battle-side-left"></div>
+                <div class="vs-center">
+                    <span class="vs-text">VS DEALER</span>
+                    <p id="roundCounter" class="round-counter"></p>
+                </div>
+                <div id="battleP2" class="battle-side battle-side-right"></div>
+            </div>
+        </section>
+
+        <section id="matchOverSection" class="card match-over-card pixel-panel" hidden>
+            <p class="eyebrow">Run Over</p>
+            <h2 id="matchWinnerText"></h2>
+            <div class="actions">
+                <button id="rematchButton" hidden>Reset Run</button>
+                <a class="button-link" href="lobby.html">Back To Lobby</a>
+            </div>
+        </section>
+
+        <section class="card table-card pixel-panel">
+            <div class="table-zone" id="dealerZone">
+                <h2>Dealer</h2>
+                <p id="dealerCombatStats" class="subtle"></p>
+                <div id="dealerCards" class="card-row"></div>
+                <p id="dealerValue" class="subtle"></p>
+            </div>
+
+            <div class="table-zone">
+                <h2>Players</h2>
+                <div id="players" class="players-grid"></div>
+            </div>
+        </section>
+
+        <section class="card controls-card pixel-panel">
+            <p class="eyebrow">Action Board</p>
+
+            <div class="primary-actions" id="primaryActions">
+                <button id="hitButton" class="action-big">Hit</button>
+                <button id="standButton" class="action-big">Stand</button>
+                <button id="doubleButton" class="action-big">Double</button>
+                <button id="splitButton" class="action-big">Split</button>
+            </div>
+
+            <div class="ability-hud">
+                <div class="ability-header">
+                    <h3>Abilities</h3>
+                    <span id="abilityUsedNote" class="ability-used-note subtle small" hidden>1 per hand</span>
+                </div>
+                <div id="abilityControls" class="ability-strip"></div>
+            </div>
+        </section>
+
+        <section class="card pixel-panel" id="summarySection">
+            <p class="eyebrow">Last Round</p>
+            <div id="roundSummary" class="summary"></div>
+        </section>
+
+    </main>
+
+    <!-- SMALL UPGRADE MODAL (after each hand) -->
+    <div id="upgradeModalOverlay" class="modal-overlay" hidden>
+        <div class="modal-content upgrade-modal">
+            <div class="modal-header">
+                <p id="upgradeResultBanner" class="modal-result-banner"></p>
+                <h2>Choose Your Upgrade</h2>
+                <div id="upgradeTimer" class="timer-display"></div>
+            </div>
+
+            <div class="player-stats-display">
+                <div class="stat-line">
+                    <span class="stat-label">Level</span>
+                    <span class="stat-current" id="statLevel">1</span>
+                    <span class="stat-arrow">→</span>
+                    <span class="stat-next" id="statLevelNext">2</span>
+                </div>
+                <div class="stat-line">
+                    <span class="stat-label">Health</span>
+                    <span class="stat-current" id="statHealth">0</span>
+                    <span class="stat-arrow">→</span>
+                    <span class="stat-next" id="statHealthNext">0</span>
+                </div>
+                <div class="stat-line">
+                    <span class="stat-label">Attack</span>
+                    <span class="stat-current" id="statAttack">0</span>
+                    <span class="stat-arrow">→</span>
+                    <span class="stat-next" id="statAttackNext">0</span>
+                </div>
+                <div class="stat-line">
+                    <span class="stat-label">Mana</span>
+                    <span class="stat-current" id="statMana">0</span>
+                    <span class="stat-arrow">→</span>
+                    <span class="stat-next" id="statManaNext">0</span>
+                </div>
+            </div>
+
+            <div class="upgrade-options" id="upgradeOptions">
+                <button id="modalUpgradeHealthButton" class="upgrade-option">
+                    <span class="upgrade-name">Upgrade Health</span>
+                    <span class="upgrade-value">+6 HP</span>
+                </button>
+                <button id="modalUpgradeAttackButton" class="upgrade-option">
+                    <span class="upgrade-name">Upgrade Attack</span>
+                    <span class="upgrade-value">+2 Damage</span>
+                </button>
+                <button id="modalUpgradeManaButton" class="upgrade-option">
+                    <span class="upgrade-name">Upgrade Mana</span>
+                    <span class="upgrade-value">+2 Mana</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BIG UPGRADE MODAL (when dealer is defeated) -->
+    <div id="blessingModalOverlay" class="modal-overlay blessing-modal-overlay" hidden>
+        <div class="modal-content blessing-modal">
+            <div class="modal-header">
+                <p class="blessing-eyebrow">⚔ Dealer Defeated!</p>
+                <p id="blessingResultBanner" class="modal-result-banner"></p>
+                <h2 id="blessingModalTitle">Choose Your Power-Up</h2>
+                <div id="blessingTimer" class="timer-display"></div>
+            </div>
+
+            <div class="upgrade-options" id="blessingOptions">
+                <!-- Populated dynamically from state.blessings -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/auth-storage.js"></script>
+    <script src="js/socket.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>

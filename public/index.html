@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmackJack — Sign In</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="page page-home">
+    <main class="shell home-shell auth-shell">
+        <section class="card hero-card pixel-panel auth-card">
+            <p class="eyebrow">SmackJack Terminal</p>
+            <h1>SmackJack</h1>
+            <p class="subtle" id="authSubtitle">Sign in to continue your run.</p>
+
+            <form id="loginForm" class="auth-form">
+                <label for="loginUsername">Username</label>
+                <input id="loginUsername" name="username" maxlength="20" placeholder="username" autocomplete="username" required>
+                <label for="loginPin">PIN</label>
+                <input id="loginPin" name="pin" type="password" inputmode="numeric" maxlength="12" placeholder="••••" autocomplete="current-password" required>
+                <label class="checkbox-row" for="rememberLoginCheckbox">
+                    <input id="rememberLoginCheckbox" name="rememberLogin" type="checkbox">
+                    Remember login
+                </label>
+                <button type="submit">Enter</button>
+            </form>
+
+            <form id="registerForm" class="auth-form" hidden>
+                <label for="regUsername">Username</label>
+                <input id="regUsername" name="username" maxlength="20" placeholder="username" autocomplete="username" required>
+                <label for="regDisplay">Display Name</label>
+                <input id="regDisplay" name="displayName" maxlength="20" placeholder="Display Name" required>
+                <label for="regPin">PIN</label>
+                <input id="regPin" name="pin" type="password" inputmode="numeric" maxlength="12" placeholder="••••" autocomplete="new-password" required>
+                <label for="regPinConfirm">Confirm PIN</label>
+                <input id="regPinConfirm" name="pinConfirm" type="password" inputmode="numeric" maxlength="12" placeholder="••••" required>
+                <button type="submit">Create Account</button>
+            </form>
+
+            <p id="authMessage" class="message" hidden></p>
+
+            <p class="subtle auth-switch-line">
+                <span id="authSwitchPrompt">Need an account?</span>
+                <button id="authSwitchButton" class="auth-switch-btn" type="button">Create Account</button>
+            </p>
+        </section>
+    </main>
+
+    <script src="js/auth-storage.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html>

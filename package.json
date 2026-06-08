@@ -1,0 +1,25 @@
+{
+  "name": "blackjack-web",
+  "version": "1.0.0",
+  "description": "SmackJack roguelike co-op blackjack with rooms and abilities",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron electron/main.js",
+    "start:web": "node server.js",
+    "dev": "node server.js",
+    "electron": "electron electron/main.js",
+    "test": "echo \"No automated tests configured yet\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "electron": "^31.0.2"
+  }
+}

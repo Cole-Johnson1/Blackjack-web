@@ -1,0 +1,152 @@
+if (!window.bjAuth) {
+    window.location.href = "index.html";
+}
+
+const menuWelcomeText = document.getElementById("menuWelcomeText");
+const rememberStatusText = document.getElementById("rememberStatusText");
+const optionsPanel = document.getElementById("optionsPanel");
+const menuMessage = document.getElementById("menuMessage");
+
+const singlePlayerButton = document.getElementById("singlePlayerButton");
+const multiPlayerButton = document.getElementById("multiPlayerButton");
+const accountButton = document.getElementById("accountButton");
+const optionsButton = document.getElementById("optionsButton");
+const clearSavedLoginButton = document.getElementById("clearSavedLoginButton");
+const logoutButton = document.getElementById("logoutButton");
+const exitButton = document.getElementById("exitButton");
+
+function getNavigableButtons() {
+    return Array.from(document.querySelectorAll(".menu-grid button"));
+}
+
+function setActiveMenuButton(button) {
+    getNavigableButtons().forEach(item => item.classList.remove("menu-focused"));
+
+    if (button) {
+        button.classList.add("menu-focused");
+    }
+}
+
+function setupMenuKeyboardNavigation() {
+    const buttons = getNavigableButtons();
+
+    if (!buttons.length) {
+        return;
+    }
+
+    buttons.forEach(button => {
+        button.addEventListener("focus", () => setActiveMenuButton(button));
+        button.addEventListener("mouseenter", () => setActiveMenuButton(button));
+    });
+
+    document.addEventListener("keydown", event => {
+        if (!["ArrowUp", "ArrowDown", "Enter"].includes(event.key)) {
+            return;
+        }
+
+        const navigable = getNavigableButtons();
+        const activeElement = document.activeElement;
+        const activeIndex = navigable.indexOf(activeElement);
+
+        if (event.key === "Enter" && activeIndex >= 0) {
+            event.preventDefault();
+            navigable[activeIndex].click();
+            return;
+        }
+
+        if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+            event.preventDefault();
+            const current = activeIndex >= 0 ? activeIndex : 0;
+            const delta = event.key === "ArrowDown" ? 1 : -1;
+            const nextIndex = (current + delta + navigable.length) % navigable.length;
+            navigable[nextIndex].focus();
+        }
+    });
+
+    buttons[0].focus();
+    setActiveMenuButton(buttons[0]);
+}
+
+async function apiLogout() {
+    const token = window.bjAuth.getToken();
+
+    if (!token) {
+        return;
+    }
+
+    await fetch("/api/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token })
+    }).catch(() => {});
+}
+
+function showMessage(text, isError = false) {
+    menuMessage.hidden = false;
+    menuMessage.textContent = text;
+    menuMessage.className = isError ? "message message-error" : "message";
+}
+
+function refreshRememberStatus() {
+    rememberStatusText.textContent = window.bjAuth.hasPersistentSession() ? "on" : "off";
+}
+
+async function logoutAndReturn() {
+    await apiLogout();
+    window.bjAuth.clearAuth();
+    window.location.href = "index.html";
+}
+
+function tryExitApp() {
+    // In Electron, window.close works as expected. Browsers may block scripted closing.
+    window.close();
+
+    setTimeout(() => {
+        if (!document.hidden) {
+            showMessage("Exit is only available in desktop mode. Close this browser tab/window.", true);
+        }
+    }, 150);
+}
+
+window.bjAuth.ensureSession().then(isValid => {
+    if (!isValid) {
+        window.bjAuth.clearAuth();
+        window.location.href = "index.html";
+        return;
+    }
+
+    menuWelcomeText.textContent = `Welcome, ${window.bjAuth.getDisplayName() || "Player"}.`;
+    refreshRememberStatus();
+    setupMenuKeyboardNavigation();
+});
+
+singlePlayerButton.addEventListener("click", () => {
+    window.location.href = "game.html?single=1";
+});
+
+multiPlayerButton.addEventListener("click", () => {
+    window.location.href = "lobby.html";
+});
+
+accountButton.addEventListener("click", () => {
+    window.location.href = "leaderboard.html";
+});
+
+optionsButton.addEventListener("click", () => {
+    optionsPanel.hidden = !optionsPanel.hidden;
+});
+
+clearSavedLoginButton.addEventListener("click", () => {
+    if (!window.bjAuth.hasPersistentSession()) {
+        showMessage("No saved login found.");
+        refreshRememberStatus();
+        return;
+    }
+
+    localStorage.removeItem(window.bjAuth.REMEMBER_TOKEN_KEY);
+    showMessage("Saved login cleared for future launches.");
+    refreshRememberStatus();
+});
+
+logoutButton.addEventListener("click", logoutAndReturn);
+exitButton.addEventListener("click", tryExitApp);

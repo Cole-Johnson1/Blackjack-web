@@ -1,0 +1,10 @@
+﻿<svg xmlns='http://www.w3.org/2000/svg' width='180' height='252' viewBox='0 0 180 252' role='img' aria-label='6 of C'>
+  <rect x='1.5' y='1.5' width='177' height='249' rx='14' ry='14' fill='#ffffff' stroke='#d9d9d9' stroke-width='3'/>
+  <text x='16' y='28' font-family='Arial, sans-serif' font-size='18' font-weight='700' fill='#111111'>6</text>
+<text x='16' y='46' font-family='Arial, sans-serif' font-size='18' fill='#111111'>♣</text>
+<g transform='rotate(180 90 126)'>
+<text x='16' y='28' font-family='Arial, sans-serif' font-size='18' font-weight='700' fill='#111111'>6</text>
+<text x='16' y='46' font-family='Arial, sans-serif' font-size='18' fill='#111111'>♣</text>
+</g>
+  <text x='90' y='86' text-anchor='middle' font-family='Arial, sans-serif' font-size='64' fill='#111111'>♣</text>
+</svg>
