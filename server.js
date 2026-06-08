@@ -9,6 +9,7 @@ const crypto = require("crypto");
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, "data", "leaderboard.json");
 const ACCOUNTS_FILE = path.join(__dirname, "data", "accounts.json");
+const SOLO_RUNS_FILE = path.join(__dirname, "data", "solo-runs.json");
 
 const BCRYPT_ROUNDS = 12;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -92,6 +93,7 @@ app.use(express.static("public"));
 
 let profiles = loadProfiles();
 let accounts = loadAccounts();
+let soloRuns = loadSoloRuns();
 
 const sessions = new Map();
 const loginAttempts = new Map();
@@ -155,6 +157,37 @@ function saveAccounts() {
     }
     catch (error) {
         console.error("Failed to save accounts data:", error);
+    }
+}
+
+function loadSoloRuns() {
+    try {
+        if (!fs.existsSync(SOLO_RUNS_FILE)) {
+            return {};
+        }
+
+        const raw = fs.readFileSync(SOLO_RUNS_FILE, "utf8").trim();
+
+        if (!raw) {
+            return {};
+        }
+
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === "object" ? parsed : {};
+    }
+    catch (error) {
+        console.error("Failed to read solo run data:", error);
+        return {};
+    }
+}
+
+function saveSoloRuns() {
+    try {
+        fs.mkdirSync(path.dirname(SOLO_RUNS_FILE), { recursive: true });
+        fs.writeFileSync(SOLO_RUNS_FILE, JSON.stringify(soloRuns, null, 2), "utf8");
+    }
+    catch (error) {
+        console.error("Failed to save solo run data:", error);
     }
 }
 
@@ -417,6 +450,7 @@ function createRunState() {
         },
         roundBanner: null,
         autoNextTimeout: null,
+        blackjackTimeout: null,
         turnOrder: [],
         currentTurnIndex: 0,
         lastRoundSummary: null,
@@ -449,6 +483,88 @@ function makePlayerRunState() {
         pendingBlessingChoices: 0,
         alive: true
     };
+}
+
+function sanitizeSavedPlayerRun(rawRun) {
+    const defaults = makePlayerRunState();
+    const candidate = rawRun && typeof rawRun === "object" ? rawRun : {};
+
+    return {
+        ...defaults,
+        ...candidate,
+        hand: Array.isArray(candidate.hand) ? candidate.hand : [],
+        resolvedHands: Array.isArray(candidate.resolvedHands) ? candidate.resolvedHands : [],
+        pendingSplitHands: Array.isArray(candidate.pendingSplitHands) ? candidate.pendingSplitHands : [],
+        levelChoiceTimeout: null
+    };
+}
+
+function sanitizeSavedGame(rawGame) {
+    const defaults = createRunState();
+    const candidate = rawGame && typeof rawGame === "object" ? rawGame : {};
+    const dealerCandidate = candidate.dealer && typeof candidate.dealer === "object"
+        ? candidate.dealer
+        : {};
+
+    return {
+        ...defaults,
+        ...candidate,
+        autoNextTimeout: null,
+        turnOrder: Array.isArray(candidate.turnOrder) ? candidate.turnOrder : [],
+        currentTurnIndex: Number.isInteger(candidate.currentTurnIndex) ? candidate.currentTurnIndex : 0,
+        dealer: {
+            ...defaults.dealer,
+            ...dealerCandidate,
+            hand: Array.isArray(dealerCandidate.hand) ? dealerCandidate.hand : []
+        }
+    };
+}
+
+function saveSoloRunForPlayer(player, room) {
+    if (!player || !room || !room.game || room.playerIds.length !== 1) {
+        return;
+    }
+
+    soloRuns[player.name] = {
+        updatedAt: Date.now(),
+        game: sanitizeSavedGame(room.game),
+        playerRun: sanitizeSavedPlayerRun(player.run)
+    };
+
+    saveSoloRuns();
+}
+
+function clearSoloRunForPlayer(playerName) {
+    const key = String(playerName || "").trim();
+
+    if (!key || !soloRuns[key]) {
+        return;
+    }
+
+    delete soloRuns[key];
+    saveSoloRuns();
+}
+
+function restoreSoloRunForPlayer(player, room) {
+    if (!player || !room || room.playerIds.length !== 1) {
+        return false;
+    }
+
+    const saved = soloRuns[player.name];
+
+    if (!saved || !saved.game || !saved.playerRun) {
+        return false;
+    }
+
+    room.game = sanitizeSavedGame(saved.game);
+    player.run = sanitizeSavedPlayerRun(saved.playerRun);
+
+    room.game.turnOrder = room.game.phase === "in-round" ? [player.id] : [];
+    room.game.currentTurnIndex = 0;
+
+    clearLevelChoiceTimer(player);
+
+    return true;
 }
 
 function resetPlayerRunState(player) {
@@ -781,10 +897,17 @@ function calculateXpToNext(level) {
 function grantXp(player, amount) {
     player.run.xp += amount;
 
+    let levelsGained = 0;
+
     while (player.run.xp >= player.run.xpToNext) {
         player.run.xp -= player.run.xpToNext;
         player.run.level += 1;
         player.run.xpToNext = calculateXpToNext(player.run.level);
+        levelsGained += 1;
+    }
+
+    if (levelsGained > 0) {
+        player.run.pendingStatChoices += levelsGained;
     }
 }
 
@@ -813,10 +936,7 @@ function scheduleLevelChoiceTimeout(room, player, timeoutMs = 30000) {
 
         const options = ["health", "attack", "mana"];
         const base = options[Math.floor(Math.random() * options.length)];
-        // If player lost their last hand, apply the weak variant automatically too.
-        const summary = room.game.lastRoundSummary;
-        const selected = (summary && summary.playerLost) ? `${base}-weak` : base;
-        applyLevelUpStat(player, selected);
+        applyLevelUpStat(player, base);
         player.run.pendingStatChoices -= 1;
 
         resolvePostRoundState(room);
@@ -827,24 +947,22 @@ function scheduleLevelChoiceTimeout(room, player, timeoutMs = 30000) {
 }
 
 function applyLevelUpStat(player, stat) {
-    // "weak" variants (chosen after a loss) grant half the normal bonus.
-    const isWeak = stat.endsWith("-weak");
-    const base = isWeak ? stat.slice(0, -5) : stat;
+    const base = String(stat || "");
 
     if (base === "health") {
-        const gain = isWeak ? 3 : 6;
+        const gain = 6;
         player.run.maxHealth += gain;
         player.run.health = Math.min(player.run.maxHealth, player.run.health + gain);
         return;
     }
 
     if (base === "attack") {
-        player.run.attackDamage += isWeak ? 1 : 2;
+        player.run.attackDamage += 2;
         return;
     }
 
     if (base === "mana") {
-        const gain = isWeak ? 1 : 2;
+        const gain = 2;
         player.run.maxMana += gain;
         player.run.mana = Math.min(player.run.maxMana, player.run.mana + gain);
     }
@@ -995,6 +1113,30 @@ function clearAutoNextTimeout(room) {
     }
 }
 
+function clearBlackjackTimeout(room) {
+    if (room.game.blackjackTimeout) {
+        clearTimeout(room.game.blackjackTimeout);
+        room.game.blackjackTimeout = null;
+    }
+}
+
+function triggerBlackjackResolution(room) {
+    if (room.game.blackjackTimeout || room.game.phase === "blackjack-delay") {
+        return;
+    }
+
+    clearAutoNextTimeout(room);
+    room.game.phase = "blackjack-delay";
+    setRoundBanner(room, "Blackjack!", "win", 2500);
+    emitRoomState(room);
+    emitGameState(room);
+
+    room.game.blackjackTimeout = setTimeout(() => {
+        room.game.blackjackTimeout = null;
+        settleRound(room);
+    }, 2500);
+}
+
 function setRoundBanner(room, text, type = "info", durationMs = 2000) {
     room.game.roundBanner = {
         text,
@@ -1044,6 +1186,7 @@ function startRoundInternal(room, socket = null) {
     }
 
     clearAutoNextTimeout(room);
+    clearBlackjackTimeout(room);
     room.game.roundBanner = null;
     room.game.totalRoundsPlayed += 1;
     room.game.phase = "in-round";
@@ -1088,9 +1231,14 @@ function startRoundInternal(room, socket = null) {
     const instantWinner = activePlayers.find(player => getHandValue(player.run.hand) === 21 && !player.run.busted);
 
     if (instantWinner) {
-        room.game.dealer.health = 0;
-        setRoundBanner(room, `${instantWinner.name} hit 21! Instant Win!`, "win", 2000);
-        settleRound(room);
+        if (isBlackjack(instantWinner.run.hand)) {
+            triggerBlackjackResolution(room);
+        }
+        else {
+            room.game.dealer.health = 0;
+            setRoundBanner(room, `${instantWinner.name} hit 21! Instant Win!`, "win", 2000);
+            settleRound(room);
+        }
         return true;
     }
 
@@ -1127,6 +1275,7 @@ function maybeAutoStartNextRound(room) {
 
 function updateRunOver(room, reason) {
     clearAutoNextTimeout(room);
+    clearBlackjackTimeout(room);
     room.game.phase = "run-over";
     room.game.runActive = false;
     room.game.roundBanner = null;
@@ -1142,6 +1291,7 @@ function updateRunOver(room, reason) {
         const profile = getOrCreateProfile(player.name);
         profile.gamesPlayed += 1;
         profile.losses += 1;
+        clearSoloRunForPlayer(player.name);
         player.stats = {
             wins: profile.wins,
             losses: profile.losses,
@@ -1192,6 +1342,8 @@ function resolvePostRoundState(room) {
 }
 
 function settleRound(room) {
+    clearBlackjackTimeout(room);
+
     const activePlayers = room.game.turnOrder
         .map(id => players[id])
         .filter(player => player && player.run.alive);
@@ -1224,7 +1376,7 @@ function settleRound(room) {
                 handResult = "loss";
             }
             else if (isBlackjack(handState.cards) && !isBlackjack(room.game.dealer.hand)) {
-                handResult = "win";
+                handResult = "blackjack";
             }
             else if (room.game.dealer.busted || handScore > dealerScore) {
                 handResult = "win";
@@ -1240,19 +1392,20 @@ function settleRound(room) {
             };
         });
 
-        const winHands = handOutcomes.filter(x => x.result === "win");
+        const winHands = handOutcomes.filter(x => x.result === "win" || x.result === "blackjack");
         const lossHands = handOutcomes.filter(x => x.result === "loss");
+        const blackjackHands = handOutcomes.filter(x => x.result === "blackjack");
 
         let result = "push";
         let score = handOutcomes.length > 0 ? Math.max(...handOutcomes.map(x => x.score)) : 0;
 
         if (winHands.length > 0) {
-            result = "win";
+            result = blackjackHands.length > 0 ? "blackjack" : "win";
             wins += 1;
-            const bestMultiplier = Math.max(...winHands.map(x => x.multiplier));
             const emberBonus = player.run.emberStrikeActive ? 2 : 1;
-            room.game.dealer.health = Math.max(0, room.game.dealer.health - (player.run.attackDamage * bestMultiplier * emberBonus));
-            grantXp(player, 40 + (winHands.length - 1) * 10);
+            const totalDamage = winHands.reduce((sum, x) => sum + (player.run.attackDamage * x.multiplier * emberBonus), 0);
+            room.game.dealer.health = Math.max(0, room.game.dealer.health - totalDamage);
+            grantXp(player, 25 * winHands.length);
         }
         else if (lossHands.length === handOutcomes.length) {
             result = "loss";
@@ -1260,10 +1413,6 @@ function settleRound(room) {
             const incoming = Math.max(1, room.game.dealer.attackDamage - player.run.tempShield);
             player.run.health = Math.max(0, player.run.health - incoming);
             player.run.alive = player.run.health > 0;
-            grantXp(player, 20);
-        }
-        else {
-            grantXp(player, 25);
         }
 
         // Reset per-hand ability flags after settlement.
@@ -1284,12 +1433,13 @@ function settleRound(room) {
     const roundDraw = wins === 0 && losses === 0;
     const dealerDefeated = room.game.dealer.health <= 0;
     const roundWon = dealerDefeated || (wins > losses && wins > 0);
+    const blackjackWin = activePlayers.some(player => getSettledHands(player).some(handState => isBlackjack(handState.cards) && !isBlackjack(room.game.dealer.hand))) && roundWon;
 
     if (roundDraw) {
         setRoundBanner(room, "Draw — Redealing", "push", 2000);
     }
     else {
-        setRoundBanner(room, roundWon ? "You Win!" : "You Lose", roundWon ? "win" : "loss", 2000);
+        setRoundBanner(room, blackjackWin ? "Blackjack!" : (roundWon ? "You Win!" : "You Lose"), roundWon ? "win" : "loss", blackjackWin ? 2500 : 2000);
     }
 
     if (!roundWon && !roundDraw) {
@@ -1298,15 +1448,6 @@ function settleRound(room) {
 
     if (roundWon && !roundDraw) {
         room.game.roundInChapter += 1;
-    }
-
-    if (!roundDraw) {
-        activePlayers.forEach(player => {
-            if (player.run.alive) {
-                // Every completed non-draw hand grants exactly one small upgrade choice.
-                player.run.pendingStatChoices += 1;
-            }
-        });
     }
 
     if (dealerDefeated) {
@@ -1368,9 +1509,15 @@ function settleRound(room) {
         dealerHealthAfter: room.game.dealer.health,
         results,
         resolvedAt: Date.now(),
-        // Passed to client so upgrade modal can show weaker bonuses on a loss.
-        playerLost: !roundWon && !roundDraw
+        playerLost: false
     };
+
+    if (room.playerIds.length === 1) {
+        const soloPlayer = players[room.playerIds[0]];
+        if (soloPlayer) {
+            saveSoloRunForPlayer(soloPlayer, room);
+        }
+    }
 
     resolvePostRoundState(room);
     emitRoomState(room);
@@ -1392,12 +1539,14 @@ function nextTurn(room) {
 
 function resetRun(room) {
     clearAutoNextTimeout(room);
+    clearBlackjackTimeout(room);
     room.game = createRunState();
 
     room.playerIds.forEach(id => {
         const player = players[id];
 
         if (player) {
+            clearSoloRunForPlayer(player.name);
             resetPlayerRunState(player);
         }
     });
@@ -1405,6 +1554,7 @@ function resetRun(room) {
 
 function startRun(room) {
     clearAutoNextTimeout(room);
+    clearBlackjackTimeout(room);
     room.game.runActive = true;
     room.game.phase = "run-lobby";
     room.game.chapter = 1;
@@ -1419,6 +1569,7 @@ function startRun(room) {
         const player = players[id];
 
         if (player) {
+            clearSoloRunForPlayer(player.name);
             resetPlayerRunState(player);
         }
     });
@@ -1565,6 +1716,22 @@ app.post("/api/session", (req, res) => {
     }
 
     return res.json({ valid: true, displayName: session.displayName });
+});
+
+app.post("/api/solo-run-status", (req, res) => {
+    const { token } = req.body || {};
+    const session = getSession(String(token || ""));
+
+    if (!session) {
+        return res.status(401).json({ valid: false, hasSavedRun: false });
+    }
+
+    const saved = soloRuns[session.displayName];
+    return res.json({
+        valid: true,
+        hasSavedRun: !!(saved && saved.game && saved.playerRun),
+        updatedAt: saved ? saved.updatedAt : null
+    });
 });
 
 app.post("/api/logout", (req, res) => {
@@ -1778,6 +1945,64 @@ io.on("connection", socket => {
         startRound(room, socket);
     });
 
+    socket.on("resumeSoloRun", ack => {
+        if (!requireJoined(socket)) {
+            if (typeof ack === "function") {
+                ack({ ok: false });
+            }
+            return;
+        }
+
+        const room = requireRoom(socket);
+
+        if (!room || !requireHost(socket, room)) {
+            if (typeof ack === "function") {
+                ack({ ok: false });
+            }
+            return;
+        }
+
+        if (room.playerIds.length !== 1) {
+            socket.emit("errorMessage", "Continue is only available for solo runs.");
+            if (typeof ack === "function") {
+                ack({ ok: false });
+            }
+            return;
+        }
+
+        const player = players[socket.id];
+
+        if (!restoreSoloRunForPlayer(player, room)) {
+            socket.emit("errorMessage", "No saved solo run found.");
+            if (typeof ack === "function") {
+                ack({ ok: false });
+            }
+            return;
+        }
+
+        emitRoomState(room);
+        emitGameState(room, room.game.phase !== "in-round");
+
+        if (typeof ack === "function") {
+            ack({ ok: true });
+        }
+    });
+
+    socket.on("saveAndExitSolo", ack => {
+        if (requireJoined(socket)) {
+            const room = getRoomBySocketId(socket.id);
+            const player = players[socket.id];
+
+            if (room && player && room.playerIds.length === 1 && room.game.runActive) {
+                saveSoloRunForPlayer(player, room);
+            }
+        }
+
+        if (typeof ack === "function") {
+            ack({ ok: true });
+        }
+    });
+
     socket.on("hit", () => {
         if (!requireJoined(socket)) {
             return;
@@ -1818,9 +2043,14 @@ io.on("connection", socket => {
         }
 
         if (getHandValue(player.run.hand) === 21) {
-            room.game.dealer.health = 0;
-            setRoundBanner(room, `${player.name} hit 21! Instant Win!`, "win", 2000);
-            settleRound(room);
+            if (isBlackjack(player.run.hand)) {
+                triggerBlackjackResolution(room);
+            }
+            else {
+                room.game.dealer.health = 0;
+                setRoundBanner(room, `${player.name} hit 21! Instant Win!`, "win", 2000);
+                settleRound(room);
+            }
             return;
         }
 
@@ -1896,9 +2126,14 @@ io.on("connection", socket => {
         player.run.standing = true;
 
         if (!player.run.busted && getHandValue(player.run.hand) === 21) {
-            room.game.dealer.health = 0;
-            setRoundBanner(room, `${player.name} hit 21! Instant Win!`, "win", 2000);
-            settleRound(room);
+            if (isBlackjack(player.run.hand)) {
+                triggerBlackjackResolution(room);
+            }
+            else {
+                room.game.dealer.health = 0;
+                setRoundBanner(room, `${player.name} hit 21! Instant Win!`, "win", 2000);
+                settleRound(room);
+            }
             return;
         }
 
@@ -1959,9 +2194,14 @@ io.on("connection", socket => {
         player.run.handActionCount = 0;
 
         if (getHandValue(player.run.hand) === 21 || getHandValue(second) === 21) {
-            room.game.dealer.health = 0;
-            setRoundBanner(room, `${player.name} split into 21! Instant Win!`, "win", 2000);
-            settleRound(room);
+            if (isBlackjack(player.run.hand) || isBlackjack(second)) {
+                triggerBlackjackResolution(room);
+            }
+            else {
+                room.game.dealer.health = 0;
+                setRoundBanner(room, `${player.name} split into 21! Instant Win!`, "win", 2000);
+                settleRound(room);
+            }
             return;
         }
 
@@ -2003,9 +2243,14 @@ io.on("connection", socket => {
         }
 
         if (getHandValue(player.run.hand) === 21) {
-            room.game.dealer.health = 0;
-            setRoundBanner(room, `${player.name} hit 21! Instant Win!`, "win", 2000);
-            settleRound(room);
+            if (isBlackjack(player.run.hand)) {
+                triggerBlackjackResolution(room);
+            }
+            else {
+                room.game.dealer.health = 0;
+                setRoundBanner(room, `${player.name} hit 21! Instant Win!`, "win", 2000);
+                settleRound(room);
+            }
             return;
         }
 
@@ -2037,7 +2282,7 @@ io.on("connection", socket => {
 
         const selected = String(stat || "").toLowerCase();
 
-        const validChoices = ["health","attack","mana","health-weak","attack-weak","mana-weak"];
+        const validChoices = ["health", "attack", "mana"];
         if (!validChoices.includes(selected)) {
             socket.emit("errorMessage", "Choose health, attack, or mana.");
             return;

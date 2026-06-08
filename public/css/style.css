@@ -613,6 +613,7 @@ td {
 .result-win  { color: var(--ok); }
 .result-loss { color: var(--danger); }
 .result-push { color: var(--text-muted); }
+.result-blackjack { color: #ffd166; }
 
 @keyframes hpPulse {
     0%, 100% { opacity: 1; transform: scale(1); }
@@ -687,6 +688,72 @@ td {
 
 .action-big:not(:disabled):active {
     transform: translateY(-2px) scale(0.98);
+}
+
+.gameplay-nav-actions {
+    margin-bottom: 10px;
+}
+
+.back-nav-button {
+    min-width: 120px;
+    min-height: 42px;
+    border-radius: 6px;
+    border: 2px solid #2f2a1a;
+    background: linear-gradient(180deg, #e8e0c6 0%, #c9bd95 100%);
+    color: #2e250f;
+    font-size: 0.62rem;
+}
+
+.back-nav-button:hover,
+.back-nav-button:focus {
+    transform: translateY(-2px);
+}
+
+.mana-potion {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0 10px;
+}
+
+.mana-potion-bottle {
+    width: 20px;
+    height: 40px;
+    border: 2px solid rgba(124, 214, 255, 0.75);
+    border-radius: 6px 6px 8px 8px;
+    background: rgba(4, 20, 34, 0.6);
+    position: relative;
+    overflow: hidden;
+}
+
+.mana-potion-bottle::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 4px;
+    width: 8px;
+    height: 6px;
+    border: 2px solid rgba(124, 214, 255, 0.75);
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    background: #1d2b30;
+}
+
+.mana-potion-fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, #53d3ff 0%, #1775ff 100%);
+    transition: height 0.2s ease;
+}
+
+.mana-potion-text {
+    font-family: "Chakra Petch", sans-serif;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #7cd6ff;
+    letter-spacing: 0.03em;
 }
 
 .ability-hud {

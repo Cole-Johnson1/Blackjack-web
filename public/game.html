@@ -17,7 +17,7 @@
             <h1>SmackJack</h1>
             <p id="tableStatus" class="subtle">Waiting for host to deal.</p>
             <p id="roundBanner" class="message" hidden></p>
-            <p class="subtle">Room: <strong id="roomCodeText">-</strong></p>
+            <p id="roomCodeRow" class="subtle">Room: <strong id="roomCodeText">-</strong></p>
             <p id="gameMessage" class="message" hidden></p>
         </section>
 
@@ -57,12 +57,15 @@
 
         <section class="card controls-card pixel-panel">
             <p class="eyebrow">Action Board</p>
+            <div class="actions gameplay-nav-actions">
+                <button id="backToMenuButton" type="button" class="back-nav-button">Back</button>
+            </div>
 
             <div class="primary-actions" id="primaryActions">
                 <button id="hitButton" class="action-big">Hit</button>
                 <button id="standButton" class="action-big">Stand</button>
                 <button id="doubleButton" class="action-big">Double</button>
-                <button id="splitButton" class="action-big">Split</button>
+                <button id="splitButton" class="action-big" hidden>Split</button>
             </div>
 
             <div class="ability-hud">

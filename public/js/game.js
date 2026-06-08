@@ -5,6 +5,7 @@ if (!window.bjAuth || (!window.bjAuth.getToken() && !window.bjAuth.getRememberTo
 const tableStatus = document.getElementById("tableStatus");
 const gameMessage = document.getElementById("gameMessage");
 const roundBanner = document.getElementById("roundBanner");
+const roomCodeRow = document.getElementById("roomCodeRow");
 const roomCodeText = document.getElementById("roomCodeText");
 
 const dealerCards = document.getElementById("dealerCards");
@@ -27,7 +28,12 @@ const hitButton = document.getElementById("hitButton");
 const standButton = document.getElementById("standButton");
 const doubleButton = document.getElementById("doubleButton");
 const splitButton = document.getElementById("splitButton");
+const backToMenuButton = document.getElementById("backToMenuButton");
 const rematchButton = document.getElementById("rematchButton");
+
+if (splitButton && splitButton.isConnected) {
+    splitButton.remove();
+}
 
 // Small upgrade modal elements
 const upgradeModalOverlay = document.getElementById("upgradeModalOverlay");
@@ -70,13 +76,17 @@ let blessingChoiceMade = false;
 
 const pageParams = new URLSearchParams(window.location.search);
 const singlePlayerMode = pageParams.get("single") === "1";
+const continueRequested = pageParams.get("continue") === "1";
+let continueAttempted = false;
 
-// Small upgrade values — halved when player lost that hand.
+if (singlePlayerMode && roomCodeRow) {
+    roomCodeRow.hidden = true;
+}
+
 const UPGRADE_FULL  = { health: 6, attack: 2, mana: 2 };
-const UPGRADE_HALF  = { health: 3, attack: 1, mana: 1 };
 
-function getUpgradeValues(playerLost) {
-    return playerLost ? UPGRADE_HALF : UPGRADE_FULL;
+function getUpgradeValues() {
+    return UPGRADE_FULL;
 }
 
 function updateUpgradeModalStats(state) {
@@ -85,8 +95,7 @@ function updateUpgradeModalStats(state) {
 
     const run = self.run;
     const level = run.level || 1;
-    const lost = !!(state.lastRoundSummary && state.lastRoundSummary.playerLost);
-    const vals = getUpgradeValues(lost);
+    const vals = getUpgradeValues();
 
     statLevel.textContent = level;
     statHealth.textContent = `${run.health}/${run.maxHealth}`;
@@ -107,10 +116,8 @@ function updateUpgradeModalStats(state) {
 function showUpgradeModal(state) {
     updateUpgradeModalStats(state);
 
-    // Show Won/Lost banner on the upgrade screen.
-    const lost = !!(state.lastRoundSummary && state.lastRoundSummary.playerLost);
-    upgradeResultBanner.textContent = lost ? "You Lost" : "You Won!";
-    upgradeResultBanner.className = `modal-result-banner ${lost ? "result-lost" : "result-won"}`;
+    upgradeResultBanner.textContent = "Level Up!";
+    upgradeResultBanner.className = "modal-result-banner result-won";
 
     if (upgradeModalVisible) {
         return;
@@ -232,14 +239,10 @@ function startPostBlessingModal() {
 // ---- Small upgrade helpers -------------------------------------------------
 
 function clickRandomUpgradeOption() {
-    // Pass lost context so server receives correct weak/full variant.
-    const lost = !!(lastState && lastState.lastRoundSummary && lastState.lastRoundSummary.playerLost);
     const bases = ["health", "attack", "mana"];
     const base = bases[Math.floor(Math.random() * bases.length)];
-    const stat = lost ? `${base}-weak` : base;
 
-    // Trigger via socket directly since we know the stat.
-    window.socket.emit("chooseLevelUp", stat);
+    window.socket.emit("chooseLevelUp", base);
     startPostChoiceModal();
 }
 
@@ -342,7 +345,7 @@ function renderBattleBar(state) {
     battleP2.innerHTML = `
         <span class="battle-name">Team</span>
         <span class="battle-hp">Alive ${alive.length} / ${allPlayers.length}</span>
-        <span class="subtle small">Round Losses ${state.roundsLost} / ${state.roundsLostLimit}</span>
+        <span class="subtle small">Party Status</span>
     `;
 
     roundCounter.textContent = `Chapter ${state.chapter} • Round ${state.roundInChapter + 1}/${state.roundsPerChapter}`;
@@ -377,6 +380,7 @@ function renderPlayers(players, currentTurnId) {
         const run = player.run;
 
         article.className = `player-card ${isCurrent ? "active-turn" : ""}`;
+        const manaPct = run.maxMana > 0 ? Math.max(0, Math.min(100, (run.mana / run.maxMana) * 100)) : 0;
 
         const handMarkup = run.hand.length
             ? renderCards(run.hand)
@@ -388,6 +392,12 @@ function renderPlayers(players, currentTurnId) {
                 <span class="hp-badge ${run.health <= 8 ? "hp-critical" : ""}">HP ${run.health}/${run.maxHealth}</span>
             </div>
             <p class="subtle small">Lv ${run.level} • XP ${run.xp}/${run.xpToNext} • AD ${run.attackDamage} • MP ${run.mana}/${run.maxMana}</p>
+            <div class="mana-potion" aria-label="Mana ${run.mana} out of ${run.maxMana}">
+                <div class="mana-potion-bottle">
+                    <div class="mana-potion-fill" style="height:${manaPct.toFixed(1)}%"></div>
+                </div>
+                <span class="mana-potion-text">${run.mana}/${run.maxMana}</span>
+            </div>
             ${renderBars(run.health, run.maxHealth)}
             <p class="hand-value">Hand: <strong>${run.handValue}</strong></p>
             <div class="card-row">${handMarkup}</div>
@@ -584,7 +594,18 @@ window.socket.on("gameState", state => {
 
     if (singlePlayerMode && isHost && !state.runActive && !singlePlayerRunStarted) {
         singlePlayerRunStarted = true;
-        window.socket.emit("startRun");
+
+        if (continueRequested && !continueAttempted) {
+            continueAttempted = true;
+            window.socket.emit("resumeSoloRun", response => {
+                if (!response || !response.ok) {
+                    window.socket.emit("startRun");
+                }
+            });
+        }
+        else {
+            window.socket.emit("startRun");
+        }
     }
 
     // Auto-start the first round for solo mode as soon as the run is created.
@@ -598,7 +619,7 @@ window.socket.on("gameState", state => {
         gameStarted = true;
     }
 
-    roomCodeText.textContent = state.roomCode || "-";
+    roomCodeText.textContent = singlePlayerMode ? "Solo" : (state.roomCode || "-");
     modeLabel.textContent = singlePlayerMode
         ? "SmackJack Solo Run"
         : "SmackJack Roguelike Co-op";
@@ -607,7 +628,10 @@ window.socket.on("gameState", state => {
         tableStatus.textContent = "Run not started. Host can start a new run.";
     }
     else if (state.phase === "in-round") {
-        tableStatus.textContent = `Round in progress • Chapter ${state.chapter} • Team losses ${state.roundsLost}/${state.roundsLostLimit}`;
+        tableStatus.textContent = `Round in progress • Chapter ${state.chapter}`;
+    }
+    else if (state.phase === "blackjack-delay") {
+        tableStatus.textContent = "Blackjack! Resolving hand...";
     }
     else if (state.phase === "level-up") {
         tableStatus.textContent = "Choose your level-up stat to continue.";
@@ -637,7 +661,16 @@ window.socket.on("gameState", state => {
     hitButton.disabled = !isMyTurn || state.phase !== "in-round";
     standButton.disabled = !isMyTurn || state.phase !== "in-round";
     doubleButton.disabled = !isMyTurn || state.phase !== "in-round" || !self || !self.run.canDouble;
-    splitButton.disabled = !isMyTurn || state.phase !== "in-round" || !self || !self.run.canSplit;
+    const canShowSplit = !!(isMyTurn && state.phase === "in-round" && self && self.run.canSplit);
+    if (canShowSplit) {
+        if (!splitButton.isConnected) {
+            doubleButton.insertAdjacentElement("afterend", splitButton);
+        }
+        splitButton.disabled = false;
+    }
+    else if (splitButton.isConnected) {
+        splitButton.remove();
+    }
 });
 
 // Modal upgrade button listeners
@@ -646,9 +679,7 @@ modalUpgradeHealthButton.addEventListener("click", () => {
         return;
     }
 
-    const lost = !!(lastState && lastState.lastRoundSummary && lastState.lastRoundSummary.playerLost);
-    const stat = lost ? "health-weak" : "health";
-    window.socket.emit("chooseLevelUp", stat);
+    window.socket.emit("chooseLevelUp", "health");
     startPostChoiceModal();
 });
 
@@ -657,9 +688,7 @@ modalUpgradeAttackButton.addEventListener("click", () => {
         return;
     }
 
-    const lost = !!(lastState && lastState.lastRoundSummary && lastState.lastRoundSummary.playerLost);
-    const stat = lost ? "attack-weak" : "attack";
-    window.socket.emit("chooseLevelUp", stat);
+    window.socket.emit("chooseLevelUp", "attack");
     startPostChoiceModal();
 });
 
@@ -668,9 +697,7 @@ modalUpgradeManaButton.addEventListener("click", () => {
         return;
     }
 
-    const lost = !!(lastState && lastState.lastRoundSummary && lastState.lastRoundSummary.playerLost);
-    const stat = lost ? "mana-weak" : "mana";
-    window.socket.emit("chooseLevelUp", stat);
+    window.socket.emit("chooseLevelUp", "mana");
     startPostChoiceModal();
 });
 
@@ -688,6 +715,22 @@ doubleButton.addEventListener("click", () => {
 
 splitButton.addEventListener("click", () => {
     window.socket.emit("split");
+});
+
+backToMenuButton.addEventListener("click", () => {
+    if (singlePlayerMode) {
+        backToMenuButton.disabled = true;
+        window.socket.emit("saveAndExitSolo", () => {
+            window.location.href = "menu.html";
+        });
+
+        setTimeout(() => {
+            window.location.href = "menu.html";
+        }, 400);
+        return;
+    }
+
+    window.location.href = "lobby.html";
 });
 
 rematchButton.addEventListener("click", () => {

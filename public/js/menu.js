@@ -14,6 +14,7 @@ const optionsButton = document.getElementById("optionsButton");
 const clearSavedLoginButton = document.getElementById("clearSavedLoginButton");
 const logoutButton = document.getElementById("logoutButton");
 const exitButton = document.getElementById("exitButton");
+let hasSavedSoloRun = false;
 
 function getNavigableButtons() {
     return Array.from(document.querySelectorAll(".menu-grid button"));
@@ -91,6 +92,37 @@ function refreshRememberStatus() {
     rememberStatusText.textContent = window.bjAuth.hasPersistentSession() ? "on" : "off";
 }
 
+async function refreshSinglePlayerEntry() {
+    hasSavedSoloRun = false;
+
+    const token = window.bjAuth.getToken();
+
+    if (!token) {
+        singlePlayerButton.textContent = "Single Player";
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/solo-run-status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token })
+        });
+
+        if (!response.ok) {
+            singlePlayerButton.textContent = "Single Player";
+            return;
+        }
+
+        const data = await response.json();
+        hasSavedSoloRun = !!data.hasSavedRun;
+        singlePlayerButton.textContent = hasSavedSoloRun ? "Continue" : "Single Player";
+    }
+    catch {
+        singlePlayerButton.textContent = "Single Player";
+    }
+}
+
 async function logoutAndReturn() {
     await apiLogout();
     window.bjAuth.clearAuth();
@@ -108,7 +140,7 @@ function tryExitApp() {
     }, 150);
 }
 
-window.bjAuth.ensureSession().then(isValid => {
+window.bjAuth.ensureSession().then(async isValid => {
     if (!isValid) {
         window.bjAuth.clearAuth();
         window.location.href = "index.html";
@@ -117,11 +149,14 @@ window.bjAuth.ensureSession().then(isValid => {
 
     menuWelcomeText.textContent = `Welcome, ${window.bjAuth.getDisplayName() || "Player"}.`;
     refreshRememberStatus();
+    await refreshSinglePlayerEntry();
     setupMenuKeyboardNavigation();
 });
 
 singlePlayerButton.addEventListener("click", () => {
-    window.location.href = "game.html?single=1";
+    window.location.href = hasSavedSoloRun
+        ? "game.html?single=1&continue=1"
+        : "game.html?single=1";
 });
 
 multiPlayerButton.addEventListener("click", () => {
