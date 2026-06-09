@@ -73,9 +73,12 @@ let blessingModalVisible = false;
 let blessingTimerInterval = null;
 let blessingTimerSeconds = 30;
 let blessingChoiceMade = false;
+let turnTimerInterval = null;
+let turnTimerSeconds = 25;
 
 const pageParams = new URLSearchParams(window.location.search);
 const singlePlayerMode = pageParams.get("single") === "1";
+const multiplayerRoomCode = pageParams.get("room") || "";
 const continueRequested = pageParams.get("continue") === "1";
 let continueAttempted = false;
 
@@ -301,6 +304,53 @@ function showMessage(text, isError = false) {
     gameMessage.hidden = false;
     gameMessage.textContent = text;
     gameMessage.className = isError ? "message message-error" : "message";
+}
+
+// ---- Per-turn countdown timer (25 seconds) --------------------------------
+
+let turnTimerEl = null;
+
+function getTurnTimerEl() {
+    if (!turnTimerEl) {
+        turnTimerEl = document.getElementById("turnTimerDisplay");
+    }
+    return turnTimerEl;
+}
+
+function startTurnTimer() {
+    stopTurnTimer();
+    turnTimerSeconds = 25;
+    const el = getTurnTimerEl();
+    if (el) {
+        el.hidden = false;
+        el.textContent = "25s";
+        el.classList.remove("warning");
+    }
+
+    turnTimerInterval = setInterval(() => {
+        turnTimerSeconds--;
+        if (el) {
+            el.textContent = `${turnTimerSeconds}s`;
+            if (turnTimerSeconds <= 5) el.classList.add("warning");
+        }
+
+        if (turnTimerSeconds <= 0) {
+            stopTurnTimer();
+            window.socket.emit("stand");
+        }
+    }, 1000);
+}
+
+function stopTurnTimer() {
+    if (turnTimerInterval) {
+        clearInterval(turnTimerInterval);
+        turnTimerInterval = null;
+    }
+    const el = getTurnTimerEl();
+    if (el) {
+        el.hidden = true;
+        el.classList.remove("warning");
+    }
 }
 
 function getCardAssetPath(card) {
@@ -671,10 +721,7 @@ function emitJoin() {
         return;
     }
 
-    const params = new URLSearchParams(window.location.search);
-    const roomCode = params.get("room") || "";
-
-    window.socket.emit("joinGame", { roomCode });
+    window.socket.emit("joinGame", { roomCode: multiplayerRoomCode });
     joined = true;
 }
 
@@ -720,6 +767,30 @@ window.socket.on("gameState", state => {
     // General host auto-start guard (used for reconnect edge-cases).
     if (isHost && state.runActive && !gameStarted && state.chapter === 1 && state.roundInChapter === 0 && state.phase === "in-round") {
         gameStarted = true;
+    }
+
+    // Multiplayer: host auto-starts first round when run is ready.
+    if (!singlePlayerMode && isHost && state.runActive && !singlePlayerRoundRequested && state.phase === "run-lobby") {
+        singlePlayerRoundRequested = true;
+        window.socket.emit("startRound");
+    }
+
+    // Turn timer: start when it becomes my turn, stop otherwise.
+    if (!singlePlayerMode && state.phase === "in-round") {
+        if (isMyTurn) {
+            if (!turnTimerInterval) {
+                startTurnTimer();
+            }
+        } else {
+            stopTurnTimer();
+        }
+    } else if (singlePlayerMode && state.phase === "in-round" && isMyTurn) {
+        // Solo: still show timer so the rule is consistent
+        if (!turnTimerInterval) {
+            startTurnTimer();
+        }
+    } else {
+        stopTurnTimer();
     }
 
     roomCodeText.textContent = singlePlayerMode ? "Solo" : (state.roomCode || "-");

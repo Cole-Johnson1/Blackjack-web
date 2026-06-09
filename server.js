@@ -520,6 +520,7 @@ function createRunState() {
         roundBanner: null,
         autoNextTimeout: null,
         blackjackTimeout: null,
+        turnTimeout: null,
         turnOrder: [],
         currentTurnIndex: 0,
         lastRoundSummary: null,
@@ -580,6 +581,7 @@ function sanitizeSavedGame(rawGame) {
         ...defaults,
         ...candidate,
         autoNextTimeout: null,
+        turnTimeout: null,
         turnOrder: Array.isArray(candidate.turnOrder) ? candidate.turnOrder : [],
         currentTurnIndex: Number.isInteger(candidate.currentTurnIndex) ? candidate.currentTurnIndex : 0,
         dealer: {
@@ -877,6 +879,17 @@ function leaveCurrentRoom(socketId, socket = null) {
         if (room.game.currentTurnIndex >= room.game.turnOrder.length) {
             room.game.currentTurnIndex = Math.max(0, room.game.turnOrder.length - 1);
         }
+
+        // If the leaving player was the current turn holder, reschedule the timer
+        // for whoever is now active (or settle if everyone is done).
+        clearTurnTimeout(room);
+        if (room.game.phase === "in-round" && room.game.turnOrder.length > 0) {
+            if (room.game.currentTurnIndex < room.game.turnOrder.length) {
+                scheduleTurnTimeout(room);
+            } else {
+                settleRound(room);
+            }
+        }
     }
 
     player.roomCode = null;
@@ -1105,10 +1118,13 @@ function getDealerStatsForRound(room) {
     const roundScale = room.game.roundInChapter + 1;
     const tier = room.game.dealerTier || 1;
 
-    // Each new dealer tier adds significant HP and attack on top of chapter scaling.
+    // Base stats scale with chapter/round/tier (same as solo).
+    // Extra players make the dealer significantly stronger: each additional
+    // player beyond the first adds 20 HP and 4 ATK so the fight stays challenging.
+    const extraPlayers = Math.max(0, aliveCount - 1);
     return {
-        maxHealth: 16 + (chapter * 5) + (roundScale * 2) + Math.max(0, aliveCount - 1) * 10 + (tier - 1) * 25,
-        attackDamage: 4 + chapter + Math.floor(Math.max(0, aliveCount - 1) * 1.5) + (tier - 1) * 4
+        maxHealth: 16 + (chapter * 5) + (roundScale * 2) + extraPlayers * 20 + (tier - 1) * 25,
+        attackDamage: 4 + chapter + Math.floor(extraPlayers * 4) + (tier - 1) * 4
     };
 }
 
@@ -1197,12 +1213,44 @@ function clearBlackjackTimeout(room) {
     }
 }
 
+function clearTurnTimeout(room) {
+    if (room.game.turnTimeout) {
+        clearTimeout(room.game.turnTimeout);
+        room.game.turnTimeout = null;
+    }
+}
+
+// 27-second server-side auto-stand: gives the 25s client timer a 2s buffer.
+function scheduleTurnTimeout(room) {
+    clearTurnTimeout(room);
+    const currentId = getCurrentPlayerId(room);
+    if (!currentId) return;
+
+    room.game.turnTimeout = setTimeout(() => {
+        room.game.turnTimeout = null;
+        if (room.game.phase !== "in-round") return;
+        if (getCurrentPlayerId(room) !== currentId) return;
+
+        const player = players[currentId];
+        if (!player || !player.run.alive) return;
+
+        player.run.standing = true;
+        const turnComplete = continueSplitOrEndTurn(player, room);
+        if (turnComplete) {
+            nextTurn(room);
+        } else {
+            emitGameState(room);
+        }
+    }, 27000);
+}
+
 function triggerBlackjackResolution(room) {
     if (room.game.blackjackTimeout || room.game.phase === "blackjack-delay") {
         return;
     }
 
     clearAutoNextTimeout(room);
+    clearTurnTimeout(room);
     room.game.phase = "blackjack-delay";
     setRoundBanner(room, "Blackjack!", "win", 2500);
     emitRoomState(room);
@@ -1320,6 +1368,7 @@ function startRoundInternal(room, socket = null) {
         return true;
     }
 
+    scheduleTurnTimeout(room);
     emitRoomState(room);
     emitGameState(room);
     return true;
@@ -1354,6 +1403,7 @@ function maybeAutoStartNextRound(room) {
 function updateRunOver(room, reason) {
     clearAutoNextTimeout(room);
     clearBlackjackTimeout(room);
+    clearTurnTimeout(room);
     room.game.phase = "run-over";
     room.game.runActive = false;
     room.game.roundBanner = null;
@@ -1421,6 +1471,7 @@ function resolvePostRoundState(room) {
 
 function settleRound(room) {
     clearBlackjackTimeout(room);
+    clearTurnTimeout(room);
 
     const activePlayers = room.game.turnOrder
         .map(id => players[id])
@@ -1605,6 +1656,7 @@ function settleRound(room) {
 }
 
 function nextTurn(room) {
+    clearTurnTimeout(room);
     room.game.currentTurnIndex += 1;
 
     if (room.game.currentTurnIndex >= room.game.turnOrder.length) {
@@ -1612,12 +1664,14 @@ function nextTurn(room) {
         return;
     }
 
+    scheduleTurnTimeout(room);
     emitGameState(room);
 }
 
 function resetRun(room) {
     clearAutoNextTimeout(room);
     clearBlackjackTimeout(room);
+    clearTurnTimeout(room);
     room.game = createRunState();
 
     room.playerIds.forEach(id => {
@@ -1633,6 +1687,7 @@ function resetRun(room) {
 function startRun(room) {
     clearAutoNextTimeout(room);
     clearBlackjackTimeout(room);
+    clearTurnTimeout(room);
     room.game.runActive = true;
     room.game.phase = "run-lobby";
     room.game.chapter = 1;
@@ -2222,6 +2277,7 @@ io.on("connection", socket => {
             return;
         }
 
+        clearTurnTimeout(room);
         const player = players[socket.id];
         player.run.hand.push(drawCard(room));
         player.run.handActionCount += 1;
@@ -2235,6 +2291,8 @@ io.on("connection", socket => {
                 nextTurn(room);
             }
             else {
+                // Moved to next split hand — restart timer.
+                scheduleTurnTimeout(room);
                 emitGameState(room);
             }
             return;
@@ -2252,6 +2310,8 @@ io.on("connection", socket => {
             return;
         }
 
+        // Still in turn — restart the countdown.
+        scheduleTurnTimeout(room);
         emitGameState(room);
     });
 
@@ -2276,6 +2336,7 @@ io.on("connection", socket => {
             return;
         }
 
+        clearTurnTimeout(room);
         players[socket.id].run.standing = true;
         const player = players[socket.id];
         const turnComplete = continueSplitOrEndTurn(player, room);
@@ -2309,6 +2370,7 @@ io.on("connection", socket => {
             return;
         }
 
+        clearTurnTimeout(room);
         const player = players[socket.id];
         const canDouble = player.run.hand.length === 2 && player.run.handActionCount === 0 && !player.run.standing && !player.run.busted;
 
@@ -2366,6 +2428,7 @@ io.on("connection", socket => {
             return;
         }
 
+        clearTurnTimeout(room);
         const player = players[socket.id];
         const hand = player.run.hand;
         // Allow split regardless of handActionCount so abilities like Arcane Draw
@@ -2404,6 +2467,7 @@ io.on("connection", socket => {
             return;
         }
 
+        scheduleTurnTimeout(room);
         emitGameState(room);
     });
 
@@ -2428,6 +2492,7 @@ io.on("connection", socket => {
             return;
         }
 
+        clearTurnTimeout(room);
         const player = players[socket.id];
         const outcome = applyAbility(player, room, String(abilityId || ""));
 
@@ -2458,6 +2523,8 @@ io.on("connection", socket => {
             return;
         }
 
+        // Ability used but turn still ongoing — restart the timer with remaining time.
+        scheduleTurnTimeout(room);
         emitGameState(room);
     });
 

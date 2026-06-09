@@ -99,6 +99,12 @@ function renderRoomState(state) {
     const players = Object.values(state.players || {});
     const self = state.players[window.socket.id];
 
+    // Keep "Enter Table" link in sync with current room code.
+    const enterTableLink = document.getElementById("enterTableLink");
+    if (enterTableLink && state.roomCode) {
+        enterTableLink.href = `game.html?room=${state.roomCode}`;
+    }
+
     // Show waiting room if run is active and phase is not in-round
     if (state.runActive && (state.phase === "level-up" || state.phase === "blessing-choice" || state.phase === "waiting")) {
         showWaitingRoom(state);
@@ -228,8 +234,10 @@ copyInviteButton.addEventListener("click", async () => {
 });
 
 startRunButton.addEventListener("click", () => {
+    const roomCode = roomCodeText.textContent.trim();
     window.socket.emit("startRun");
-    window.location.href = "game.html";
+    const dest = roomCode && roomCode !== "-" ? `game.html?room=${roomCode}` : "game.html";
+    window.location.href = dest;
 });
 
 toggleRoomsButton.addEventListener("click", () => {
@@ -242,7 +250,9 @@ toggleRoomsButton.addEventListener("click", () => {
 
 waitingReadyButton.addEventListener("click", () => {
     // Auto-advance to game table when in waiting room
-    window.location.href = "game.html";
+    const roomCode = roomCodeText.textContent.trim();
+    const dest = roomCode && roomCode !== "-" ? `game.html?room=${roomCode}` : "game.html";
+    window.location.href = dest;
 });
 
 updateRoomsVisibility();
