@@ -55,6 +55,12 @@ const blessingOptions = document.getElementById("blessingOptions");
 const blessingModalTitle = document.getElementById("blessingModalTitle");
 const blessingResultBanner = document.getElementById("blessingResultBanner");
 
+const shopModalOverlay = document.getElementById("shopModalOverlay");
+const shopTimer = document.getElementById("shopTimer");
+const shopOptions = document.getElementById("shopOptions");
+const shopModalTitle = document.getElementById("shopModalTitle");
+const shopResultBanner = document.getElementById("shopResultBanner");
+
 // Stat display elements
 const statLevel = document.getElementById("statLevel");
 const statLevelNext = document.getElementById("statLevelNext");
@@ -78,6 +84,10 @@ let blessingModalVisible = false;
 let blessingTimerInterval = null;
 let blessingTimerSeconds = 30;
 let blessingChoiceMade = false;
+let shopModalVisible = false;
+let shopTimerInterval = null;
+let shopTimerSeconds = 30;
+let shopChoiceMade = false;
 let turnTimerInterval = null;
 let turnTimerSeconds = 25;
 let escMenuOpen = false;
@@ -197,6 +207,105 @@ function hideBlessingModal() {
         clearInterval(blessingTimerInterval);
         blessingTimerInterval = null;
     }
+}
+
+function showShopModal(state) {
+    if (shopModalVisible) {
+        return;
+    }
+
+    setEscMenuOpen(false);
+    shopModalTitle.textContent = "Boss Shop — Choose 1 Reward";
+    shopResultBanner.textContent = "A powerful dealer was defeated.";
+    shopResultBanner.className = "modal-result-banner result-won";
+
+    const self = state.players[window.socket.id];
+    const shopChoices = self && self.run && Array.isArray(self.run.pendingShopOptions)
+        ? self.run.pendingShopOptions
+        : [];
+
+    shopOptions.innerHTML = "";
+    shopChoices.forEach(item => {
+        const btn = document.createElement("button");
+        btn.className = "upgrade-option blessing-option";
+        btn.dataset.shopItemId = item.id;
+        btn.innerHTML = `
+            <span class="upgrade-name">${item.name}</span>
+            <span class="upgrade-value">${item.description}</span>
+        `;
+        btn.addEventListener("click", () => {
+            if (shopChoiceMade) return;
+            window.socket.emit("chooseShopItem", item.id);
+            startPostShopModal();
+        });
+        shopOptions.appendChild(btn);
+    });
+
+    shopModalVisible = true;
+    shopModalOverlay.removeAttribute("hidden");
+    startShopTimer();
+}
+
+function hideShopModal() {
+    shopModalVisible = false;
+    shopModalOverlay.setAttribute("hidden", "");
+    if (shopTimerInterval) {
+        clearInterval(shopTimerInterval);
+        shopTimerInterval = null;
+    }
+}
+
+function clickRandomShopOption() {
+    const buttons = shopOptions.querySelectorAll(".blessing-option");
+    if (!buttons.length) return;
+    const selected = buttons[Math.floor(Math.random() * buttons.length)];
+    selected.click();
+}
+
+function startShopTimer() {
+    shopChoiceMade = false;
+    shopTimerSeconds = 30;
+    shopTimer.classList.remove("warning");
+    shopTimer.textContent = "30s";
+
+    if (shopTimerInterval) clearInterval(shopTimerInterval);
+
+    shopTimerInterval = setInterval(() => {
+        shopTimerSeconds--;
+        shopTimer.textContent = `${shopTimerSeconds}s`;
+
+        if (shopTimerSeconds <= 5) {
+            shopTimer.classList.add("warning");
+        }
+
+        if (shopTimerSeconds <= 0) {
+            clearInterval(shopTimerInterval);
+            shopTimerInterval = null;
+            if (!shopChoiceMade) {
+                clickRandomShopOption();
+            }
+        }
+    }, 1000);
+}
+
+function startPostShopModal() {
+    shopChoiceMade = true;
+    shopTimerSeconds = 5;
+    shopTimer.classList.remove("warning");
+    shopTimer.textContent = "5s";
+
+    if (shopTimerInterval) clearInterval(shopTimerInterval);
+
+    shopTimerInterval = setInterval(() => {
+        shopTimerSeconds--;
+        shopTimer.textContent = `${shopTimerSeconds}s`;
+
+        if (shopTimerSeconds <= 0) {
+            clearInterval(shopTimerInterval);
+            shopTimerInterval = null;
+            hideShopModal();
+        }
+    }, 1000);
 }
 
 function clickRandomBlessingOption() {
@@ -609,6 +718,7 @@ function renderBattleBar(state) {
 
     battleP1.innerHTML = `
         <span class="hud-pill hud-pill-level">★ Tier ${dTier}</span>
+        <span class="hud-pill hud-pill-attack">${state.dealer.isBoss ? "BOSS" : "Dealer"}: ${state.dealer.name || "Dealer"}</span>
         <span class="hud-pill hud-pill-health ${dCritical ? 'critical' : ''}">❤ ${state.dealer.health}/${state.dealer.maxHealth}</span>
         <span class="hud-pill hud-pill-attack">⚔ ATK ${state.dealer.attackDamage}</span>
     `;
@@ -977,15 +1087,23 @@ function renderProgressChoices(state) {
 
     const hasLevelChoice = self.run.pendingStatChoices > 0;
     const hasBlessingChoice = self.run.pendingBlessingChoices > 0;
+    const hasShopChoice = self.run.pendingShopChoices > 0;
 
     // Small upgrade modal — hide during blessing phase so they don't stack.
-    if (hasBlessingChoice) {
+    if (hasShopChoice) {
+        hideUpgradeModal();
+        hideBlessingModal();
+        showShopModal(state);
+    } else if (hasBlessingChoice) {
+        hideShopModal();
         hideUpgradeModal();
         showBlessingModal(state);
     } else if (hasLevelChoice) {
+        hideShopModal();
         hideBlessingModal();
         showUpgradeModal(state);
     } else {
+        hideShopModal();
         hideUpgradeModal();
         hideBlessingModal();
     }
@@ -1138,6 +1256,9 @@ window.socket.on("gameState", state => {
     else if (state.phase === "blessing-choice") {
         tableStatus.textContent = "Choose your big upgrade to continue.";
     }
+    else if (state.phase === "shop-choice") {
+        tableStatus.textContent = "Boss defeated. Visit the shop and choose one reward.";
+    }
     else if (state.phase === "run-over") {
         tableStatus.textContent = "Run over. Host can reset and start again.";
     }
@@ -1149,7 +1270,7 @@ window.socket.on("gameState", state => {
     updateAtmosphere(state);
     dealerCards.innerHTML = renderCards(state.dealer.hand || [], { owner: "dealer" });
     dealerValue.textContent = `HAND: ${state.dealer.handValue || 0}`;
-    dealerCombatStats.textContent = `Tier ${state.dealerTier || 1}  •  ATK ${state.dealer.attackDamage}`;
+    dealerCombatStats.textContent = `${state.dealer.isBoss ? "Boss" : "Dealer"} ${state.dealer.name || "Dealer"}  •  Tier ${state.dealerTier || 1}  •  ATK ${state.dealer.attackDamage}`;
 
     renderBattleBar(state);
     renderPlayers(state.players, state.currentTurnId, state.phase);
@@ -1253,7 +1374,7 @@ function setEscMenuOpen(open) {
 }
 
 function canOpenEscMenu() {
-    return !upgradeModalVisible && !blessingModalVisible && !!(matchOverSection && matchOverSection.hidden);
+    return !upgradeModalVisible && !blessingModalVisible && !shopModalVisible && !!(matchOverSection && matchOverSection.hidden);
 }
 
 function openEscMenu() {

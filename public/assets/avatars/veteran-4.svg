@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Veteran Obsidian avatar">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8b95a5"/>
+      <stop offset="100%" stop-color="#1c2433"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="url(#g)"/>
+  <circle cx="64" cy="42" r="20" fill="#edf1f7"/>
+  <path d="M30 108c7-16 19-24 34-24s27 8 34 24" fill="#edf1f7"/>
+  <path d="M36 30h56v8H36zm8 12h40v8H44z" fill="#ffffff"/>
+</svg>

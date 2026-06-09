@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Veteran Tidal avatar">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#b6ecff"/>
+      <stop offset="100%" stop-color="#1464b9"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="url(#g)"/>
+  <circle cx="64" cy="42" r="20" fill="#eff9ff"/>
+  <path d="M30 108c7-16 19-24 34-24s27 8 34 24" fill="#eff9ff"/>
+  <path d="M24 86c10-4 19 4 29 0 9-3 18-12 30-7 8 3 15 3 21-1" stroke="#ffffff" stroke-width="4" fill="none"/>
+</svg>

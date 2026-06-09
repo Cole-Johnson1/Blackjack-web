@@ -6,7 +6,10 @@ const { __testOnly } = require("../server");
 const {
     makePlayerRunState,
     calculateXpToNext,
+    calculateAccountXpToNext,
     grantXp,
+    grantAccountXp,
+    ensureAccountDefaults,
     applyLevelUpStat,
     getHandValue,
     isBlackjack
@@ -41,6 +44,28 @@ test("grantXp levels up after 2 wins-equivalent then 3 more", () => {
     assert.equal(player.run.xp, 0);
     assert.equal(player.run.xpToNext, 20);
     assert.equal(player.run.pendingStatChoices, 2);
+});
+
+test("account xp levels up and unlock progression triggers at level 5", () => {
+    const account = {
+        rememberTokens: [],
+        profilePicture: "",
+        selectedProfilePictureId: "rookie_1",
+        unlockedProfilePictures: ["rookie_1"],
+        accountLevel: 1,
+        accountXp: 0,
+        accountXpToNext: calculateAccountXpToNext(1),
+        accountTotalXp: 0
+    };
+
+    ensureAccountDefaults(account);
+
+    // Push account to level 5.
+    grantAccountXp(account, 50 + 80 + 110 + 140);
+
+    assert.equal(account.accountLevel, 5);
+    assert.ok(account.unlockedProfilePictures.includes("veteran_1"));
+    assert.ok(account.accountXpToNext > 0);
 });
 
 test("level-up stat upgrades apply expected values", () => {

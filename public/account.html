@@ -18,6 +18,15 @@
                 <img id="accountAvatarPreview" class="account-avatar" alt="Profile picture preview" src="assets/cards/back.svg">
             </div>
 
+            <section class="account-progress">
+                <p class="subtle">Account Level</p>
+                <p id="accountLevelText" class="account-level-text">Lv 1</p>
+                <div class="account-xp-bar">
+                    <div id="accountXpFill" class="account-xp-fill" style="width:0%"></div>
+                </div>
+                <p id="accountXpText" class="subtle small">0 / 50 XP</p>
+            </section>
+
             <form id="accountForm" class="auth-form">
                 <label for="accountUsername">Username</label>
                 <input id="accountUsername" type="text" disabled>
@@ -25,8 +34,10 @@
                 <label for="accountDisplayName">Display Name</label>
                 <input id="accountDisplayName" type="text" maxlength="20" required>
 
-                <label for="accountProfilePicture">Profile Picture URL (or data URL)</label>
-                <input id="accountProfilePicture" type="text" maxlength="250000" placeholder="https://... or data:image/...">
+                <fieldset class="avatar-picker-fieldset">
+                    <legend>Profile Picture</legend>
+                    <div id="accountAvatarChoices" class="avatar-choice-grid"></div>
+                </fieldset>
 
                 <label for="accountCurrentPin">Current PIN (required to change PIN)</label>
                 <input id="accountCurrentPin" type="password" inputmode="numeric" maxlength="12" autocomplete="current-password">

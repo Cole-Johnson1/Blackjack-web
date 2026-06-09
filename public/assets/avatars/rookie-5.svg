@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Rookie Violet avatar">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e3b8ff"/>
+      <stop offset="100%" stop-color="#8a4bdb"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="url(#g)"/>
+  <circle cx="64" cy="46" r="21" fill="#f8ecff"/>
+  <path d="M30 110c4-21 17-31 34-31 20 0 33 11 34 31" fill="#f8ecff"/>
+  <text x="64" y="24" text-anchor="middle" font-size="14" font-family="Arial" fill="#ffffff">R5</text>
+</svg>

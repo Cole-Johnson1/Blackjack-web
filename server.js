@@ -14,6 +14,16 @@ const SOLO_RUNS_FILE = path.join(__dirname, "data", "solo-runs.json");
 const BCRYPT_ROUNDS = 12;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const REMEMBER_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const BUILT_IN_ADMIN_USERNAME = "admin";
+const BUILT_IN_ADMIN_DISPLAY_NAME = "Admin";
+const BUILT_IN_ADMIN_PIN = "0000";
+const ADMIN_USERNAMES = new Set(
+    String(process.env.ADMIN_USERNAMES || "admin")
+        .split(",")
+        .map(name => String(name || "").trim().toLowerCase())
+        .filter(Boolean)
+);
+    ADMIN_USERNAMES.add(BUILT_IN_ADMIN_USERNAME);
 
 const RUN_LOSS_LIMIT = 3;
 const ROUNDS_PER_CHAPTER = 5;
@@ -26,6 +36,69 @@ const BASE_PLAYER = {
 };
 
 const BLESSING_OPTION_COUNT = 3;
+const SHOP_OPTION_COUNT = 3;
+
+const ACCOUNT_LEVEL_UNLOCK_STEP = 5;
+
+const PROFILE_PICTURES = [
+    { id: "rookie_1", name: "Rookie Red", path: "assets/avatars/rookie-1.svg", unlockLevel: 1 },
+    { id: "rookie_2", name: "Rookie Blue", path: "assets/avatars/rookie-2.svg", unlockLevel: 1 },
+    { id: "rookie_3", name: "Rookie Green", path: "assets/avatars/rookie-3.svg", unlockLevel: 1 },
+    { id: "rookie_4", name: "Rookie Gold", path: "assets/avatars/rookie-4.svg", unlockLevel: 1 },
+    { id: "rookie_5", name: "Rookie Violet", path: "assets/avatars/rookie-5.svg", unlockLevel: 1 },
+    { id: "veteran_1", name: "Veteran Ember", path: "assets/avatars/veteran-1.svg", unlockLevel: 5 },
+    { id: "veteran_2", name: "Veteran Tidal", path: "assets/avatars/veteran-2.svg", unlockLevel: 10 },
+    { id: "veteran_3", name: "Veteran Verdant", path: "assets/avatars/veteran-3.svg", unlockLevel: 15 },
+    { id: "veteran_4", name: "Veteran Obsidian", path: "assets/avatars/veteran-4.svg", unlockLevel: 20 },
+    { id: "veteran_5", name: "Veteran Nova", path: "assets/avatars/veteran-5.svg", unlockLevel: 25 }
+];
+
+const DEFAULT_PROFILE_PICTURE_ID = PROFILE_PICTURES[0].id;
+
+const DEALER_ARCHETYPES = [
+    { id: "crusher", name: "Crusher", healthMult: 1.2, attackMult: 0.95 },
+    { id: "duelist", name: "Duelist", healthMult: 0.9, attackMult: 1.2 },
+    { id: "bulwark", name: "Bulwark", healthMult: 1.35, attackMult: 0.85 },
+    { id: "warlock", name: "Warlock", healthMult: 1.05, attackMult: 1.05 }
+];
+
+const SHOP_ITEMS = {
+    ironBand: {
+        id: "ironBand",
+        type: "relic",
+        name: "Iron Band",
+        description: "+2 Attack permanently for this run.",
+        repeatable: true
+    },
+    moonwellVial: {
+        id: "moonwellVial",
+        type: "relic",
+        name: "Moonwell Vial",
+        description: "+10 Max HP and heal 10.",
+        repeatable: true
+    },
+    prismCore: {
+        id: "prismCore",
+        type: "relic",
+        name: "Prism Core",
+        description: "+2 Max Mana and +2 Mana now.",
+        repeatable: true
+    },
+    aceForge: {
+        id: "aceForge",
+        type: "card",
+        name: "Ace Forge",
+        description: "Each round, your lowest opening card is transmuted into A of Diamonds.",
+        repeatable: false
+    },
+    kingEtcher: {
+        id: "kingEtcher",
+        type: "card",
+        name: "King Etcher",
+        description: "Gain 2 card upgrade charges. Each charge upgrades a low card into K of Hearts.",
+        repeatable: true
+    }
+};
 
 const ABILITIES = {
     arcaneDraw: {
@@ -178,6 +251,144 @@ function saveAccounts() {
     }
 }
 
+function isReservedAdminUsername(username) {
+    return String(username || "").trim().toLowerCase() === BUILT_IN_ADMIN_USERNAME;
+}
+
+function isReservedAdminDisplayName(displayName) {
+    return String(displayName || "").trim().toLowerCase() === BUILT_IN_ADMIN_DISPLAY_NAME.toLowerCase();
+}
+
+function ensureBuiltInAdminAccount() {
+    const existing = accounts[BUILT_IN_ADMIN_USERNAME] || {};
+    const now = Date.now();
+
+    accounts[BUILT_IN_ADMIN_USERNAME] = {
+        ...existing,
+        username: BUILT_IN_ADMIN_USERNAME,
+        displayName: BUILT_IN_ADMIN_DISPLAY_NAME,
+        pinHash: bcrypt.hashSync(BUILT_IN_ADMIN_PIN, BCRYPT_ROUNDS),
+        profilePicture: resolveProfilePicturePath(DEFAULT_PROFILE_PICTURE_ID),
+        selectedProfilePictureId: DEFAULT_PROFILE_PICTURE_ID,
+        unlockedProfilePictures: PROFILE_PICTURES.filter(pic => pic.unlockLevel <= 1).map(pic => pic.id),
+        accountLevel: Math.max(1, Number(existing.accountLevel) || 1),
+        accountXp: Math.max(0, Number(existing.accountXp) || 0),
+        accountXpToNext: Math.max(1, Number(existing.accountXpToNext) || calculateAccountXpToNext(Math.max(1, Number(existing.accountLevel) || 1))),
+        accountTotalXp: Math.max(0, Number(existing.accountTotalXp) || 0),
+        isAdmin: true,
+        isDisabled: false,
+        createdAt: existing.createdAt || now,
+        rememberTokens: Array.isArray(existing.rememberTokens) ? existing.rememberTokens : []
+    };
+}
+
+function getProfilePictureById(id) {
+    return PROFILE_PICTURES.find(pic => pic.id === id) || null;
+}
+
+function resolveProfilePicturePath(profilePictureId) {
+    const picture = getProfilePictureById(profilePictureId) || getProfilePictureById(DEFAULT_PROFILE_PICTURE_ID);
+    return picture ? picture.path : "assets/cards/back.svg";
+}
+
+function calculateAccountXpToNext(level) {
+    return 50 + (Math.max(1, level) - 1) * 30;
+}
+
+function normalizeUnlockedPictures(unlockedIds) {
+    if (!Array.isArray(unlockedIds)) {
+        return [];
+    }
+
+    const known = new Set(PROFILE_PICTURES.map(pic => pic.id));
+    return Array.from(new Set(unlockedIds.filter(id => known.has(id))));
+}
+
+function refreshAccountPictureUnlocks(account) {
+    const unlocked = new Set(normalizeUnlockedPictures(account.unlockedProfilePictures));
+    const level = Math.max(1, Number(account.accountLevel) || 1);
+
+    PROFILE_PICTURES.forEach(pic => {
+        if (level >= pic.unlockLevel) {
+            unlocked.add(pic.id);
+        }
+    });
+
+    account.unlockedProfilePictures = Array.from(unlocked);
+
+    if (!account.unlockedProfilePictures.includes(account.selectedProfilePictureId)) {
+        account.selectedProfilePictureId = account.unlockedProfilePictures.includes(DEFAULT_PROFILE_PICTURE_ID)
+            ? DEFAULT_PROFILE_PICTURE_ID
+            : account.unlockedProfilePictures[0] || DEFAULT_PROFILE_PICTURE_ID;
+    }
+
+    account.profilePicture = resolveProfilePicturePath(account.selectedProfilePictureId);
+}
+
+function grantAccountXp(account, amount) {
+    if (!account) {
+        return { gainedLevels: 0 };
+    }
+
+    const xpGain = Math.max(0, Math.round(Number(amount) || 0));
+    if (xpGain <= 0) {
+        return { gainedLevels: 0 };
+    }
+
+    account.accountXp += xpGain;
+    account.accountTotalXp += xpGain;
+
+    let gainedLevels = 0;
+
+    while (account.accountXp >= account.accountXpToNext) {
+        account.accountXp -= account.accountXpToNext;
+        account.accountLevel += 1;
+        account.accountXpToNext = calculateAccountXpToNext(account.accountLevel);
+        gainedLevels += 1;
+    }
+
+    if (gainedLevels > 0 || account.accountLevel % ACCOUNT_LEVEL_UNLOCK_STEP === 0) {
+        refreshAccountPictureUnlocks(account);
+    }
+
+    return { gainedLevels };
+}
+
+function getAccountForPlayer(player) {
+    if (!player) {
+        return null;
+    }
+
+    if (player.username && accounts[player.username]) {
+        return accounts[player.username];
+    }
+
+    const displayName = String(player.name || "").trim().toLowerCase();
+    if (!displayName) {
+        return null;
+    }
+
+    const key = Object.keys(accounts).find(username => {
+        const account = accounts[username];
+        return account && String(account.displayName || "").trim().toLowerCase() === displayName;
+    });
+
+    return key ? accounts[key] : null;
+}
+
+function getPublicProfilePicturesForAccount(account) {
+    const unlockedSet = new Set(normalizeUnlockedPictures(account ? account.unlockedProfilePictures : []));
+    const level = Math.max(1, Number(account && account.accountLevel) || 1);
+
+    return PROFILE_PICTURES.map(pic => ({
+        id: pic.id,
+        name: pic.name,
+        path: pic.path,
+        unlockLevel: pic.unlockLevel,
+        unlocked: unlockedSet.has(pic.id) || level >= pic.unlockLevel
+    }));
+}
+
 function ensureAccountDefaults(account) {
     if (!account) {
         return;
@@ -187,8 +398,77 @@ function ensureAccountDefaults(account) {
         account.rememberTokens = [];
     }
 
+    if (typeof account.isAdmin !== "boolean") {
+        account.isAdmin = false;
+    }
+
+    if (typeof account.isDisabled !== "boolean") {
+        account.isDisabled = false;
+    }
+
+    if (ADMIN_USERNAMES.has(String(account.username || "").toLowerCase())) {
+        account.isAdmin = true;
+    }
+
     if (typeof account.profilePicture !== "string") {
         account.profilePicture = "";
+    }
+
+    if (!Number.isFinite(account.accountLevel) || account.accountLevel < 1) {
+        account.accountLevel = 1;
+    }
+
+    if (!Number.isFinite(account.accountXp) || account.accountXp < 0) {
+        account.accountXp = 0;
+    }
+
+    if (!Number.isFinite(account.accountTotalXp) || account.accountTotalXp < 0) {
+        account.accountTotalXp = 0;
+    }
+
+    if (!Number.isFinite(account.accountXpToNext) || account.accountXpToNext < 1) {
+        account.accountXpToNext = calculateAccountXpToNext(account.accountLevel);
+    }
+
+    if (typeof account.selectedProfilePictureId !== "string" || !getProfilePictureById(account.selectedProfilePictureId)) {
+        const fromLegacyPath = PROFILE_PICTURES.find(pic => pic.path === account.profilePicture);
+        account.selectedProfilePictureId = fromLegacyPath ? fromLegacyPath.id : DEFAULT_PROFILE_PICTURE_ID;
+    }
+
+    account.unlockedProfilePictures = normalizeUnlockedPictures(account.unlockedProfilePictures);
+    refreshAccountPictureUnlocks(account);
+}
+
+function syncProfilesWithAccounts() {
+    let changed = false;
+
+    Object.values(accounts).forEach(account => {
+        ensureAccountDefaults(account);
+
+        const displayName = normalizeName(account.displayName);
+        if (!displayName) {
+            return;
+        }
+
+        if (!profiles[displayName]) {
+            profiles[displayName] = makeProfile(displayName);
+            changed = true;
+            return;
+        }
+
+        if (profiles[displayName].runsCompleted === undefined) {
+            profiles[displayName].runsCompleted = 0;
+            changed = true;
+        }
+
+        if (profiles[displayName].highestChapter === undefined) {
+            profiles[displayName].highestChapter = 1;
+            changed = true;
+        }
+    });
+
+    if (changed) {
+        saveProfiles();
     }
 }
 
@@ -313,6 +593,11 @@ function getAccountFromToken(token) {
     const account = accounts[session.username] || null;
     if (account) {
         ensureAccountDefaults(account);
+
+        if (account.isDisabled) {
+            sessions.delete(String(token || ""));
+            return { session: null, account: null };
+        }
     }
 
     return { session, account };
@@ -356,7 +641,10 @@ function updateConnectedPlayerName(username, nextDisplayName) {
     });
 }
 
+ensureBuiltInAdminAccount();
 Object.values(accounts).forEach(ensureAccountDefaults);
+syncProfilesWithAccounts();
+saveAccounts();
 
 function recordLoginAttempt(ip) {
     const now = Date.now();
@@ -472,8 +760,10 @@ function isBlackjack(hand) {
     return hand.length === 2 && getHandValue(hand) === 21;
 }
 
-function getSortedLeaderboard(limit = 20) {
-    return Object.values(profiles)
+function getSortedLeaderboard(limit = null) {
+    syncProfilesWithAccounts();
+
+    const rows = Object.values(profiles)
         .sort((a, b) => {
             if (b.runsCompleted !== a.runsCompleted) {
                 return b.runsCompleted - a.runsCompleted;
@@ -485,7 +775,6 @@ function getSortedLeaderboard(limit = 20) {
 
             return a.name.localeCompare(b.name);
         })
-        .slice(0, limit)
         .map((entry, index) => ({
             rank: index + 1,
             name: entry.name,
@@ -498,6 +787,12 @@ function getSortedLeaderboard(limit = 20) {
             runsCompleted: entry.runsCompleted,
             highestChapter: entry.highestChapter
         }));
+
+    if (!Number.isFinite(limit) || limit <= 0) {
+        return rows;
+    }
+
+    return rows.slice(0, Math.floor(limit));
 }
 
 function createRoomCode() {
@@ -533,7 +828,10 @@ function createRunState() {
             busted: false,
             maxHealth: 0,
             health: 0,
-            attackDamage: 0
+            attackDamage: 0,
+            isBoss: false,
+            archetypeId: "",
+            name: "Dealer"
         },
         roundBanner: null,
         autoNextTimeout: null,
@@ -542,7 +840,8 @@ function createRunState() {
         turnOrder: [],
         currentTurnIndex: 0,
         lastRoundSummary: null,
-        runResult: null
+        runResult: null,
+        shopSeed: 0
     };
 }
 
@@ -567,6 +866,13 @@ function makePlayerRunState() {
         tranceStacks: 0,
         unlockedAbilities: [],
         pendingBlessingOptions: [],
+        pendingShopChoices: 0,
+        pendingShopOptions: [],
+        relics: [],
+        relicEffects: {
+            openingAceForge: false,
+            cardUpgradeCharges: 0
+        },
         health: BASE_PLAYER.health,
         maxHealth: BASE_PLAYER.health,
         attackDamage: BASE_PLAYER.attackDamage,
@@ -597,6 +903,17 @@ function sanitizeSavedPlayerRun(rawRun) {
         pendingBlessingOptions: Array.isArray(candidate.pendingBlessingOptions)
             ? candidate.pendingBlessingOptions.filter(option => option && ABILITIES[option.id])
             : [],
+        pendingShopChoices: Number.isFinite(candidate.pendingShopChoices) ? Math.max(0, Math.floor(candidate.pendingShopChoices)) : 0,
+        pendingShopOptions: Array.isArray(candidate.pendingShopOptions)
+            ? candidate.pendingShopOptions.filter(option => option && SHOP_ITEMS[option.id])
+            : [],
+        relics: Array.isArray(candidate.relics)
+            ? candidate.relics.filter(id => SHOP_ITEMS[id])
+            : [],
+        relicEffects: {
+            openingAceForge: !!(candidate.relicEffects && candidate.relicEffects.openingAceForge),
+            cardUpgradeCharges: Math.max(0, Number(candidate.relicEffects && candidate.relicEffects.cardUpgradeCharges) || 0)
+        },
         levelChoiceTimeout: null
     };
 }
@@ -653,6 +970,118 @@ function applyBlessingChoice(run, abilityId) {
     run.mana = Math.min(run.maxMana, run.mana + 2);
 }
 
+function isBossTier(tier) {
+    return Math.max(1, Number(tier) || 1) % ROUNDS_PER_CHAPTER === 0;
+}
+
+function getDealerArchetypeForTier(tier) {
+    const index = (Math.max(1, Number(tier) || 1) - 1) % DEALER_ARCHETYPES.length;
+    return DEALER_ARCHETYPES[index];
+}
+
+function buildShopOptionsForRun(run) {
+    const allItems = Object.values(SHOP_ITEMS);
+    const owned = new Set(Array.isArray(run.relics) ? run.relics : []);
+    const pool = allItems.filter(item => item.repeatable || !owned.has(item.id));
+    const selectionPool = pool.length >= SHOP_OPTION_COUNT ? pool : allItems;
+
+    return pickRandom(selectionPool, SHOP_OPTION_COUNT).map(item => ({
+        id: item.id,
+        type: item.type,
+        name: item.name,
+        description: item.description
+    }));
+}
+
+function ensureShopOptions(run) {
+    if (run.pendingShopChoices <= 0) {
+        run.pendingShopOptions = [];
+        return;
+    }
+
+    if (!Array.isArray(run.pendingShopOptions) || run.pendingShopOptions.length === 0) {
+        run.pendingShopOptions = buildShopOptionsForRun(run);
+    }
+}
+
+function transmuteLowestCard(hand, replacementCard) {
+    if (!Array.isArray(hand) || hand.length === 0 || !replacementCard) {
+        return false;
+    }
+
+    let index = 0;
+    let lowestValue = Infinity;
+
+    hand.forEach((card, cardIndex) => {
+        const value = getCardValue(card);
+        if (value < lowestValue) {
+            lowestValue = value;
+            index = cardIndex;
+        }
+    });
+
+    hand[index] = { ...replacementCard };
+    return true;
+}
+
+function applyShopChoice(run, itemId) {
+    const item = SHOP_ITEMS[itemId];
+    if (!item) {
+        return false;
+    }
+
+    if (!Array.isArray(run.relics)) {
+        run.relics = [];
+    }
+
+    if (!run.relicEffects || typeof run.relicEffects !== "object") {
+        run.relicEffects = { openingAceForge: false, cardUpgradeCharges: 0 };
+    }
+
+    if (!item.repeatable && run.relics.includes(item.id)) {
+        return false;
+    }
+
+    if (item.id === "ironBand") {
+        run.attackDamage += 2;
+    }
+    else if (item.id === "moonwellVial") {
+        run.maxHealth += 10;
+        run.health = Math.min(run.maxHealth, run.health + 10);
+    }
+    else if (item.id === "prismCore") {
+        run.maxMana += 2;
+        run.mana = Math.min(run.maxMana, run.mana + 2);
+    }
+    else if (item.id === "aceForge") {
+        run.relicEffects.openingAceForge = true;
+    }
+    else if (item.id === "kingEtcher") {
+        run.relicEffects.cardUpgradeCharges = Math.max(0, Number(run.relicEffects.cardUpgradeCharges) || 0) + 2;
+    }
+
+    run.relics.push(item.id);
+    return true;
+}
+
+function applyRoundStartRelics(player) {
+    const run = player && player.run;
+    if (!run || !Array.isArray(run.hand) || run.hand.length === 0) {
+        return;
+    }
+
+    if (run.relicEffects && run.relicEffects.openingAceForge) {
+        transmuteLowestCard(run.hand, { value: "A", suit: "D" });
+    }
+
+    if (run.relicEffects && Number(run.relicEffects.cardUpgradeCharges) > 0) {
+        const changed = transmuteLowestCard(run.hand, { value: "K", suit: "H" });
+        if (changed) {
+            run.relicEffects.cardUpgradeCharges -= 1;
+        }
+    }
+}
+
 function sanitizeSavedGame(rawGame) {
     const defaults = createRunState();
     const candidate = rawGame && typeof rawGame === "object" ? rawGame : {};
@@ -671,7 +1100,8 @@ function sanitizeSavedGame(rawGame) {
             ...defaults.dealer,
             ...dealerCandidate,
             hand: Array.isArray(dealerCandidate.hand) ? dealerCandidate.hand : []
-        }
+        },
+        shopSeed: Number.isFinite(candidate.shopSeed) ? candidate.shopSeed : 0
     };
 }
 
@@ -829,6 +1259,11 @@ function getPublicPlayer(player) {
             pendingBlessingOptions: Array.isArray(run.pendingBlessingOptions)
                 ? run.pendingBlessingOptions.map(option => ({ ...option }))
                 : [],
+            pendingShopChoices: run.pendingShopChoices,
+            pendingShopOptions: Array.isArray(run.pendingShopOptions)
+                ? run.pendingShopOptions.map(option => ({ ...option }))
+                : [],
+            relics: Array.isArray(run.relics) ? [...run.relics] : [],
             unlockedAbilities: Array.isArray(run.unlockedAbilities) ? [...run.unlockedAbilities] : [],
             alive: run.alive,
             emberStrikeActive: run.emberStrikeActive || false
@@ -873,7 +1308,10 @@ function getPublicGameState(room, revealDealer = false) {
             busted: room.game.dealer.busted,
             health: room.game.dealer.health,
             maxHealth: room.game.dealer.maxHealth,
-            attackDamage: room.game.dealer.attackDamage
+            attackDamage: room.game.dealer.attackDamage,
+            isBoss: !!room.game.dealer.isBoss,
+            archetypeId: room.game.dealer.archetypeId || "",
+            name: room.game.dealer.name || "Dealer"
         },
         roundBanner,
         players: Object.fromEntries(room.playerIds.map(id => [id, getPublicPlayer(players[id])])),
@@ -1059,7 +1497,11 @@ function requireHost(socket, room) {
 function anyPendingChoices(room) {
     return room.playerIds.some(id => {
         const player = players[id];
-        return player && (player.run.pendingStatChoices > 0 || player.run.pendingBlessingChoices > 0);
+        return player && (
+            player.run.pendingStatChoices > 0
+            || player.run.pendingBlessingChoices > 0
+            || player.run.pendingShopChoices > 0
+        );
     });
 }
 
@@ -1248,14 +1690,25 @@ function getDealerStatsForRound(room) {
     const chapter = room.game.chapter;
     const roundScale = room.game.roundInChapter + 1;
     const tier = room.game.dealerTier || 1;
+    const archetype = getDealerArchetypeForTier(tier);
+    const isBoss = isBossTier(tier);
 
     // Base stats scale with chapter/round/tier (same as solo).
     // Extra players make the dealer significantly stronger: each additional
     // player beyond the first adds 20 HP and 4 ATK so the fight stays challenging.
     const extraPlayers = Math.max(0, aliveCount - 1);
+    const baseMaxHealth = 16 + (chapter * 5) + (roundScale * 2) + extraPlayers * 20 + (tier - 1) * 25;
+    const baseAttackDamage = 4 + chapter + Math.floor(extraPlayers * 4) + (tier - 1) * 4;
+
+    const bossHealthMult = isBoss ? 1.65 : 1;
+    const bossAttackMult = isBoss ? 1.4 : 1;
+
     return {
-        maxHealth: 16 + (chapter * 5) + (roundScale * 2) + extraPlayers * 20 + (tier - 1) * 25,
-        attackDamage: 4 + chapter + Math.floor(extraPlayers * 4) + (tier - 1) * 4
+        maxHealth: Math.max(1, Math.round(baseMaxHealth * archetype.healthMult * bossHealthMult)),
+        attackDamage: Math.max(1, Math.round(baseAttackDamage * archetype.attackMult * bossAttackMult)),
+        isBoss,
+        archetypeId: archetype.id,
+        name: isBoss ? `Boss ${archetype.name}` : `${archetype.name} Dealer`
     };
 }
 
@@ -1494,7 +1947,7 @@ function startRoundInternal(room, socket = null) {
         return false;
     }
 
-    if (room.game.phase === "level-up" || room.game.phase === "blessing-choice") {
+    if (room.game.phase === "level-up" || room.game.phase === "blessing-choice" || room.game.phase === "shop-choice") {
         if (socket) {
             socket.emit("errorMessage", "Resolve pending upgrades first.");
         }
@@ -1541,7 +1994,10 @@ function startRoundInternal(room, socket = null) {
             busted: false,
             health: dealerStats.maxHealth,
             maxHealth: dealerStats.maxHealth,
-            attackDamage: dealerStats.attackDamage
+            attackDamage: dealerStats.attackDamage,
+            isBoss: dealerStats.isBoss,
+            archetypeId: dealerStats.archetypeId,
+            name: dealerStats.name
         };
     }
 
@@ -1565,6 +2021,8 @@ function startRoundInternal(room, socket = null) {
         player.run.siphonStrikeActive = false;
         player.run.focusSigilActive = false;
         player.run.mana = Math.min(player.run.maxMana, player.run.mana + 2);
+        applyRoundStartRelics(player);
+        player.run.busted = getHandValue(player.run.hand) > 21;
         room.game.turnOrder.push(player.id);
     });
 
@@ -1633,6 +2091,14 @@ function updateRunOver(room, reason) {
         const profile = getOrCreateProfile(player.name);
         profile.gamesPlayed += 1;
         profile.losses += 1;
+
+        const account = getAccountForPlayer(player);
+        if (account) {
+            const rounds = Math.max(1, Number(room.game.totalRoundsPlayed) || 1);
+            const multiplier = 1 + Math.min(1.5, Math.max(0, rounds - 3) * 0.08);
+            grantAccountXp(account, Math.round(18 * multiplier));
+        }
+
         clearSoloRunForPlayer(player.name);
         player.stats = {
             wins: profile.wins,
@@ -1643,6 +2109,7 @@ function updateRunOver(room, reason) {
     });
 
     saveProfiles();
+    saveAccounts();
     io.emit("leaderboardUpdated", getSortedLeaderboard());
 }
 
@@ -1652,6 +2119,7 @@ function resolvePostRoundState(room) {
         .filter(player => player && player.run.alive);
 
     alive.forEach(player => ensureBlessingOptions(player.run));
+    alive.forEach(player => ensureShopOptions(player.run));
 
     if (alive.length === 0) {
         updateRunOver(room, "All players were defeated.");
@@ -1659,6 +2127,11 @@ function resolvePostRoundState(room) {
     }
 
     // Game ends only when all players are dead; losing hands no longer ends the run.
+
+    if (alive.some(player => player.run.pendingShopChoices > 0)) {
+        room.game.phase = "shop-choice";
+        return;
+    }
 
     if (alive.some(player => player.run.pendingBlessingChoices > 0)) {
         room.game.phase = "blessing-choice";
@@ -1703,6 +2176,7 @@ function settleRound(room) {
     let wins = 0;
     let losses = 0;
     const results = [];
+    let accountProgressUpdated = false;
 
     activePlayers.forEach(player => {
         const roundOutcome = resolvePlayerRoundOutcome(
@@ -1745,6 +2219,16 @@ function settleRound(room) {
             player.run.tranceStacks -= 1;
         }
 
+        const account = getAccountForPlayer(player);
+        if (account) {
+            const baseAccountXp = result === "win" || result === "blackjack"
+                ? 10
+                : (result === "push" ? 5 : 3);
+            const runLengthMultiplier = 1 + Math.min(1.25, Math.max(0, room.game.totalRoundsPlayed - 1) * 0.06);
+            grantAccountXp(account, Math.round(baseAccountXp * runLengthMultiplier));
+            accountProgressUpdated = true;
+        }
+
         results.push({
             name: player.name,
             result,
@@ -1778,13 +2262,20 @@ function settleRound(room) {
 
     if (dealerDefeated) {
         // Advance tier so the next dealer spawns stronger.
-        room.game.dealerTier = (room.game.dealerTier || 1) + 1;
+        const defeatedDealerTier = room.game.dealerTier || 1;
+        const defeatedBoss = isBossTier(defeatedDealerTier);
+        room.game.dealerTier = defeatedDealerTier + 1;
 
         activePlayers.forEach(player => {
             if (player.run.alive) {
                 // Big upgrade whenever dealer HP is fully depleted.
                 player.run.pendingBlessingChoices += 1;
                 ensureBlessingOptions(player.run);
+
+                if (defeatedBoss) {
+                    player.run.pendingShopChoices += 1;
+                    ensureShopOptions(player.run);
+                }
             }
         });
     }
@@ -1845,6 +2336,10 @@ function settleRound(room) {
         if (soloPlayer) {
             saveSoloRunForPlayer(soloPlayer, room);
         }
+    }
+
+    if (accountProgressUpdated) {
+        saveAccounts();
     }
 
     resolvePostRoundState(room);
@@ -1911,6 +2406,40 @@ function startRound(room, socket) {
     startRoundInternal(room, socket);
 }
 
+function requireAdminAccountFromToken(token) {
+    const { session, account } = getAccountFromToken(token);
+
+    if (!session || !account) {
+        return { ok: false, status: 401, error: "Session expired." };
+    }
+
+    if (!account.isAdmin) {
+        return { ok: false, status: 403, error: "Admin privileges required." };
+    }
+
+    return { ok: true, session, account };
+}
+
+function serializeAdminAccountRow(account) {
+    const profile = profiles[account.displayName] || makeProfile(account.displayName);
+
+    return {
+        username: account.username,
+        displayName: account.displayName,
+        createdAt: account.createdAt || null,
+        isAdmin: !!account.isAdmin,
+        isDisabled: !!account.isDisabled,
+        accountLevel: account.accountLevel || 1,
+        accountTotalXp: account.accountTotalXp || 0,
+        wins: profile.wins || 0,
+        losses: profile.losses || 0,
+        pushes: profile.pushes || 0,
+        gamesPlayed: profile.gamesPlayed || 0,
+        runsCompleted: profile.runsCompleted || 0,
+        highestChapter: profile.highestChapter || 1
+    };
+}
+
 app.post("/api/register", async (req, res) => {
     const { username, displayName, pin } = req.body || {};
 
@@ -1930,6 +2459,14 @@ app.post("/api/register", async (req, res) => {
 
     const key = String(username).toLowerCase();
 
+    if (isReservedAdminUsername(key)) {
+        return res.status(403).json({ error: "That username is reserved." });
+    }
+
+    if (isReservedAdminDisplayName(trimmedDisplay)) {
+        return res.status(403).json({ error: "That display name is reserved." });
+    }
+
     if (accounts[key]) {
         return res.status(409).json({ error: "That username is already taken." });
     }
@@ -1940,10 +2477,21 @@ app.post("/api/register", async (req, res) => {
             username: key,
             displayName: trimmedDisplay,
             pinHash,
-            profilePicture: "",
+            profilePicture: resolveProfilePicturePath(DEFAULT_PROFILE_PICTURE_ID),
+            selectedProfilePictureId: DEFAULT_PROFILE_PICTURE_ID,
+            unlockedProfilePictures: PROFILE_PICTURES.filter(pic => pic.unlockLevel <= 1).map(pic => pic.id),
+            accountLevel: 1,
+            accountXp: 0,
+            accountXpToNext: calculateAccountXpToNext(1),
+            accountTotalXp: 0,
+            isAdmin: ADMIN_USERNAMES.has(key),
+            isDisabled: false,
             createdAt: Date.now()
         };
+        getOrCreateProfile(trimmedDisplay);
         saveAccounts();
+        saveProfiles();
+        io.emit("leaderboardUpdated", getSortedLeaderboard());
         return res.status(201).json({ ok: true });
     }
     catch (error) {
@@ -1974,6 +2522,13 @@ app.post("/api/login", async (req, res) => {
     }
 
     try {
+        ensureAccountDefaults(account);
+
+        if (account.isDisabled) {
+            recordLoginAttempt(ip);
+            return res.status(403).json({ error: "This account has been disabled." });
+        }
+
         const match = await bcrypt.compare(String(pin), account.pinHash);
 
         if (!match) {
@@ -2020,6 +2575,12 @@ app.post("/api/remember-login", (req, res) => {
         return res.status(401).json({ error: "Remember login expired." });
     }
 
+    ensureAccountDefaults(account);
+
+    if (account.isDisabled) {
+        return res.status(403).json({ error: "This account has been disabled." });
+    }
+
     const token = generateToken();
     sessions.set(token, {
         username: account.username,
@@ -2042,13 +2603,24 @@ app.post("/api/remember-login", (req, res) => {
 
 app.post("/api/session", (req, res) => {
     const { token } = req.body || {};
-    const session = getSession(String(token || ""));
+    const sessionToken = String(token || "");
+    const session = getSession(sessionToken);
 
     if (!session) {
         return res.status(401).json({ valid: false });
     }
 
-    return res.json({ valid: true, displayName: session.displayName });
+    const account = accounts[session.username] || null;
+    if (account) {
+        ensureAccountDefaults(account);
+
+        if (account.isDisabled) {
+            sessions.delete(sessionToken);
+            return res.status(401).json({ valid: false });
+        }
+    }
+
+    return res.json({ valid: true, displayName: session.displayName, isAdmin: !!(account && account.isAdmin) });
 });
 
 app.post("/api/account", (req, res) => {
@@ -2062,7 +2634,14 @@ app.post("/api/account", (req, res) => {
     return res.json({
         username: account.username,
         displayName: account.displayName,
-        profilePicture: account.profilePicture || ""
+        isAdmin: !!account.isAdmin,
+        profilePicture: account.profilePicture || "",
+        selectedProfilePictureId: account.selectedProfilePictureId,
+        accountLevel: account.accountLevel,
+        accountXp: account.accountXp,
+        accountXpToNext: account.accountXpToNext,
+        accountTotalXp: account.accountTotalXp,
+        profilePictures: getPublicProfilePicturesForAccount(account)
     });
 });
 
@@ -2071,6 +2650,7 @@ app.post("/api/account/update", async (req, res) => {
         token,
         displayName,
         profilePicture,
+        selectedProfilePictureId,
         currentPin,
         newPin
     } = req.body || {};
@@ -2089,6 +2669,10 @@ app.post("/api/account/update", async (req, res) => {
             return res.status(400).json({ error: "Display name must be 2-20 characters (letters, numbers, spaces, _ or -)." });
         }
 
+        if (isReservedAdminDisplayName(nextDisplay) && account.username !== BUILT_IN_ADMIN_USERNAME) {
+            return res.status(403).json({ error: "That display name is reserved." });
+        }
+
         if (nextDisplay !== account.displayName && profiles[nextDisplay]) {
             return res.status(409).json({ error: "Display name is already in use." });
         }
@@ -2104,6 +2688,25 @@ app.post("/api/account/update", async (req, res) => {
         }
 
         updates.profilePicture = nextPicture;
+    }
+
+    if (selectedProfilePictureId !== undefined) {
+        const nextPictureId = String(selectedProfilePictureId || "").trim();
+        const pictureMeta = getProfilePictureById(nextPictureId);
+
+        if (!pictureMeta) {
+            return res.status(400).json({ error: "Unknown profile picture." });
+        }
+
+        refreshAccountPictureUnlocks(account);
+        const unlocked = new Set(account.unlockedProfilePictures || []);
+
+        if (!unlocked.has(nextPictureId)) {
+            return res.status(403).json({ error: "That profile picture is locked." });
+        }
+
+        updates.selectedProfilePictureId = nextPictureId;
+        updates.profilePicture = pictureMeta.path;
     }
 
     if (newPin !== undefined && String(newPin || "").length > 0) {
@@ -2143,6 +2746,10 @@ app.post("/api/account/update", async (req, res) => {
         account.profilePicture = updates.profilePicture;
     }
 
+    if (updates.selectedProfilePictureId !== undefined) {
+        account.selectedProfilePictureId = updates.selectedProfilePictureId;
+    }
+
     if (updates.pinHash) {
         account.pinHash = updates.pinHash;
     }
@@ -2154,8 +2761,131 @@ app.post("/api/account/update", async (req, res) => {
     return res.json({
         ok: true,
         displayName: account.displayName,
-        profilePicture: account.profilePicture || ""
+        profilePicture: account.profilePicture || "",
+        selectedProfilePictureId: account.selectedProfilePictureId,
+        accountLevel: account.accountLevel,
+        accountXp: account.accountXp,
+        accountXpToNext: account.accountXpToNext,
+        accountTotalXp: account.accountTotalXp,
+        profilePictures: getPublicProfilePicturesForAccount(account)
     });
+});
+
+app.post("/api/admin/accounts", (req, res) => {
+    const { token } = req.body || {};
+    const admin = requireAdminAccountFromToken(token);
+
+    if (!admin.ok) {
+        return res.status(admin.status).json({ error: admin.error });
+    }
+
+    syncProfilesWithAccounts();
+
+    const rows = Object.values(accounts)
+        .map(account => {
+            ensureAccountDefaults(account);
+            return serializeAdminAccountRow(account);
+        })
+        .sort((a, b) => String(a.username).localeCompare(String(b.username)));
+
+    return res.json({ accounts: rows });
+});
+
+app.post("/api/admin/account/set-role", (req, res) => {
+    const { token, username, isAdmin } = req.body || {};
+    const admin = requireAdminAccountFromToken(token);
+
+    if (!admin.ok) {
+        return res.status(admin.status).json({ error: admin.error });
+    }
+
+    const key = String(username || "").trim().toLowerCase();
+    const target = accounts[key];
+
+    if (!target) {
+        return res.status(404).json({ error: "Account not found." });
+    }
+
+    if (target.username === BUILT_IN_ADMIN_USERNAME && !isAdmin) {
+        return res.status(403).json({ error: "Built-in Admin role cannot be removed." });
+    }
+
+    target.isAdmin = !!isAdmin;
+    saveAccounts();
+
+    return res.json({ ok: true, account: serializeAdminAccountRow(target) });
+});
+
+app.post("/api/admin/account/set-disabled", (req, res) => {
+    const { token, username, isDisabled } = req.body || {};
+    const admin = requireAdminAccountFromToken(token);
+
+    if (!admin.ok) {
+        return res.status(admin.status).json({ error: admin.error });
+    }
+
+    const key = String(username || "").trim().toLowerCase();
+    const target = accounts[key];
+
+    if (!target) {
+        return res.status(404).json({ error: "Account not found." });
+    }
+
+    if (target.username === BUILT_IN_ADMIN_USERNAME && !!isDisabled) {
+        return res.status(403).json({ error: "Built-in Admin account cannot be disabled." });
+    }
+
+    target.isDisabled = !!isDisabled;
+
+    if (target.isDisabled) {
+        for (const [sessionToken, session] of sessions.entries()) {
+            if (session && session.username === target.username) {
+                sessions.delete(sessionToken);
+            }
+        }
+    }
+
+    saveAccounts();
+    return res.json({ ok: true, account: serializeAdminAccountRow(target) });
+});
+
+app.post("/api/admin/account/delete", (req, res) => {
+    const { token, username } = req.body || {};
+    const admin = requireAdminAccountFromToken(token);
+
+    if (!admin.ok) {
+        return res.status(admin.status).json({ error: admin.error });
+    }
+
+    const key = String(username || "").trim().toLowerCase();
+    const target = accounts[key];
+
+    if (!target) {
+        return res.status(404).json({ error: "Account not found." });
+    }
+
+    if (target.username === BUILT_IN_ADMIN_USERNAME) {
+        return res.status(403).json({ error: "Built-in Admin account cannot be deleted." });
+    }
+
+    for (const [sessionToken, session] of sessions.entries()) {
+        if (session && session.username === target.username) {
+            sessions.delete(sessionToken);
+        }
+    }
+
+    delete accounts[key];
+
+    if (profiles[target.displayName]) {
+        delete profiles[target.displayName];
+        saveProfiles();
+        io.emit("leaderboardUpdated", getSortedLeaderboard());
+    }
+
+    clearSoloRunForPlayer(target.displayName);
+    saveAccounts();
+
+    return res.json({ ok: true });
 });
 
 app.post("/api/solo-run-status", (req, res) => {
@@ -2232,6 +2962,16 @@ io.use((socket, next) => {
         return next(new Error(token ? "AUTH_EXPIRED" : "AUTH_REQUIRED"));
     }
 
+    const account = accounts[session.username] || null;
+    if (account) {
+        ensureAccountDefaults(account);
+
+        if (account.isDisabled) {
+            sessions.delete(String(token || ""));
+            return next(new Error("AUTH_EXPIRED"));
+        }
+    }
+
     socket.data.username = session.username;
     socket.data.displayName = session.displayName;
     socket.data.token = token;
@@ -2245,6 +2985,7 @@ io.on("connection", socket => {
     socket.on("joinGame", payload => {
         const requestRoomCode = payload && payload.roomCode ? String(payload.roomCode).toUpperCase() : "";
         const displayName = socket.data.displayName;
+        const username = socket.data.username;
 
         const existingId = Object.keys(players).find(
             id => players[id].name.toLowerCase() === displayName.toLowerCase() && id !== socket.id
@@ -2255,6 +2996,7 @@ io.on("connection", socket => {
             const oldRoom = existing.roomCode ? rooms.get(existing.roomCode) : null;
 
             existing.id = socket.id;
+            existing.username = username;
             players[socket.id] = existing;
             delete players[existingId];
 
@@ -2286,6 +3028,7 @@ io.on("connection", socket => {
 
         players[socket.id] = {
             id: socket.id,
+            username,
             roomCode: null,
             name: displayName,
             connectedAt: Date.now(),
@@ -2803,6 +3546,58 @@ io.on("connection", socket => {
         maybeAutoStartNextRound(room);
     });
 
+    socket.on("chooseShopItem", itemId => {
+        if (!requireJoined(socket)) {
+            return;
+        }
+
+        const room = requireRoom(socket);
+
+        if (!room) {
+            return;
+        }
+
+        const player = players[socket.id];
+
+        if (player.run.pendingShopChoices <= 0) {
+            socket.emit("errorMessage", "No shop choice pending.");
+            return;
+        }
+
+        const selectedId = String(itemId || "");
+        const options = Array.isArray(player.run.pendingShopOptions)
+            ? player.run.pendingShopOptions
+            : [];
+        const selected = options.find(option => option && option.id === selectedId);
+
+        if (!selected || !SHOP_ITEMS[selectedId]) {
+            socket.emit("errorMessage", "Unknown shop item.");
+            return;
+        }
+
+        const applied = applyShopChoice(player.run, selectedId);
+        if (!applied) {
+            socket.emit("errorMessage", "That item is no longer available for this run.");
+            return;
+        }
+
+        player.run.pendingShopChoices -= 1;
+        player.run.pendingShopOptions = [];
+        ensureShopOptions(player.run);
+
+        if (room.playerIds.length === 1) {
+            saveSoloRunForPlayer(player, room);
+        }
+
+        emitRoomState(room);
+        emitGameState(room);
+
+        resolvePostRoundState(room);
+        emitRoomState(room);
+        emitGameState(room);
+        maybeAutoStartNextRound(room);
+    });
+
     socket.on("resetRun", () => {
         if (!requireJoined(socket)) {
             return;
@@ -2850,7 +3645,10 @@ module.exports = {
     __testOnly: {
         makePlayerRunState,
         calculateXpToNext,
+        calculateAccountXpToNext,
         grantXp,
+        grantAccountXp,
+        ensureAccountDefaults,
         applyLevelUpStat,
         resolvePlayerRoundOutcome,
         getCardValue,

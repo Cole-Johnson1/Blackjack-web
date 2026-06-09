@@ -10,13 +10,15 @@ const resetRunButton = document.getElementById("resetRunButton");
 const multiPlayerButton = document.getElementById("multiPlayerButton");
 const accountButton = document.getElementById("accountButton");
 const leaderboardButton = document.getElementById("leaderboardButton");
+const adminPanelButton = document.getElementById("adminPanelButton");
 const optionsButton = document.getElementById("optionsButton");
 const logoutButton = document.getElementById("logoutButton");
 const exitButton = document.getElementById("exitButton");
 let hasSavedSoloRun = false;
 
 function getNavigableButtons() {
-    return Array.from(document.querySelectorAll(".menu-grid button"));
+    return Array.from(document.querySelectorAll(".menu-grid button"))
+        .filter(button => !button.hidden && !button.disabled);
 }
 
 function setActiveMenuButton(button) {
@@ -118,6 +120,33 @@ async function refreshSinglePlayerEntry() {
     }
 }
 
+async function refreshAdminEntry() {
+    adminPanelButton.hidden = true;
+
+    const token = window.bjAuth.getToken();
+    if (!token) {
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/account", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token })
+        });
+
+        if (!response.ok) {
+            return;
+        }
+
+        const data = await response.json();
+        adminPanelButton.hidden = !data.isAdmin;
+    }
+    catch {
+        adminPanelButton.hidden = true;
+    }
+}
+
 async function logoutAndReturn() {
     await apiLogout();
     window.bjAuth.clearAuth();
@@ -144,6 +173,7 @@ window.bjAuth.ensureSession().then(async isValid => {
 
     menuWelcomeText.textContent = `Welcome, ${window.bjAuth.getDisplayName() || "Player"}.`;
     await refreshSinglePlayerEntry();
+    await refreshAdminEntry();
     setupMenuKeyboardNavigation();
 });
 
@@ -197,6 +227,10 @@ accountButton.addEventListener("click", () => {
 
 leaderboardButton.addEventListener("click", () => {
     window.location.href = "leaderboard.html";
+});
+
+adminPanelButton.addEventListener("click", () => {
+    window.location.href = "admin.html";
 });
 
 optionsButton.addEventListener("click", () => {

@@ -5,12 +5,18 @@ if (!window.bjAuth) {
 const accountForm = document.getElementById("accountForm");
 const accountUsername = document.getElementById("accountUsername");
 const accountDisplayName = document.getElementById("accountDisplayName");
-const accountProfilePicture = document.getElementById("accountProfilePicture");
 const accountCurrentPin = document.getElementById("accountCurrentPin");
 const accountNewPin = document.getElementById("accountNewPin");
 const accountConfirmPin = document.getElementById("accountConfirmPin");
 const accountAvatarPreview = document.getElementById("accountAvatarPreview");
+const accountAvatarChoices = document.getElementById("accountAvatarChoices");
+const accountLevelText = document.getElementById("accountLevelText");
+const accountXpFill = document.getElementById("accountXpFill");
+const accountXpText = document.getElementById("accountXpText");
 const accountMessage = document.getElementById("accountMessage");
+
+let selectedProfilePictureId = "";
+let availableProfilePictures = [];
 
 function showMessage(text, isError = false) {
     accountMessage.hidden = false;
@@ -18,9 +24,61 @@ function showMessage(text, isError = false) {
     accountMessage.className = isError ? "message message-error" : "message";
 }
 
+function getSelectedAvatarPath() {
+    const selected = availableProfilePictures.find(pic => pic.id === selectedProfilePictureId);
+    return selected ? selected.path : "assets/cards/back.svg";
+}
+
 function refreshAvatar() {
-    const raw = String(accountProfilePicture.value || "").trim();
-    accountAvatarPreview.src = raw || "assets/cards/back.svg";
+    accountAvatarPreview.src = getSelectedAvatarPath();
+}
+
+function renderProgress(level, xp, xpToNext) {
+    const safeLevel = Math.max(1, Number(level) || 1);
+    const safeXp = Math.max(0, Number(xp) || 0);
+    const safeXpToNext = Math.max(1, Number(xpToNext) || 1);
+    const pct = Math.max(0, Math.min(100, (safeXp / safeXpToNext) * 100));
+
+    accountLevelText.textContent = `Lv ${safeLevel}`;
+    accountXpFill.style.width = `${pct.toFixed(1)}%`;
+    accountXpText.textContent = `${safeXp} / ${safeXpToNext} XP`;
+}
+
+function renderAvatarChoices() {
+    accountAvatarChoices.innerHTML = "";
+
+    availableProfilePictures.forEach(pic => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "avatar-choice";
+        button.dataset.avatarId = pic.id;
+
+        if (pic.unlocked) {
+            if (pic.id === selectedProfilePictureId) {
+                button.classList.add("selected");
+            }
+        }
+        else {
+            button.classList.add("locked");
+            button.disabled = true;
+        }
+
+        button.innerHTML = `
+            <img src="${pic.path}" alt="${pic.name}">
+            <span class="avatar-choice-name">${pic.name}</span>
+            <span class="avatar-choice-meta">${pic.unlocked ? "Unlocked" : `Unlocks at Lv ${pic.unlockLevel}`}</span>
+        `;
+
+        if (pic.unlocked) {
+            button.addEventListener("click", () => {
+                selectedProfilePictureId = pic.id;
+                renderAvatarChoices();
+                refreshAvatar();
+            });
+        }
+
+        accountAvatarChoices.appendChild(button);
+    });
 }
 
 async function loadAccount() {
@@ -39,7 +97,10 @@ async function loadAccount() {
     const data = await response.json();
     accountUsername.value = data.username || "";
     accountDisplayName.value = data.displayName || "";
-    accountProfilePicture.value = data.profilePicture || "";
+    availableProfilePictures = Array.isArray(data.profilePictures) ? data.profilePictures : [];
+    selectedProfilePictureId = data.selectedProfilePictureId || (availableProfilePictures[0] && availableProfilePictures[0].id) || "";
+    renderProgress(data.accountLevel, data.accountXp, data.accountXpToNext);
+    renderAvatarChoices();
     refreshAvatar();
 }
 
@@ -58,7 +119,6 @@ window.bjAuth.ensureSession().then(async isValid => {
     }
 });
 
-accountProfilePicture.addEventListener("input", refreshAvatar);
 accountAvatarPreview.addEventListener("error", () => {
     accountAvatarPreview.src = "assets/cards/back.svg";
 });
@@ -68,7 +128,6 @@ accountForm.addEventListener("submit", async event => {
 
     const token = window.bjAuth.getToken();
     const displayName = accountDisplayName.value.trim();
-    const profilePicture = accountProfilePicture.value.trim();
     const currentPin = accountCurrentPin.value;
     const newPin = accountNewPin.value;
     const confirmPin = accountConfirmPin.value;
@@ -87,7 +146,7 @@ accountForm.addEventListener("submit", async event => {
             body: JSON.stringify({
                 token,
                 displayName,
-                profilePicture,
+                selectedProfilePictureId,
                 currentPin,
                 newPin
             })
@@ -101,6 +160,10 @@ accountForm.addEventListener("submit", async event => {
         }
 
         window.bjAuth.setDisplayName(data.displayName || displayName);
+        availableProfilePictures = Array.isArray(data.profilePictures) ? data.profilePictures : availableProfilePictures;
+        selectedProfilePictureId = data.selectedProfilePictureId || selectedProfilePictureId;
+        renderProgress(data.accountLevel, data.accountXp, data.accountXpToNext);
+        renderAvatarChoices();
         accountCurrentPin.value = "";
         accountNewPin.value = "";
         accountConfirmPin.value = "";

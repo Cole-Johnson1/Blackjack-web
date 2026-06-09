@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Rookie Blue avatar">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#98c7ff"/>
+      <stop offset="100%" stop-color="#3c6bff"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="url(#g)"/>
+  <circle cx="64" cy="48" r="21" fill="#ecf4ff"/>
+  <rect x="30" y="78" width="68" height="34" rx="16" fill="#ecf4ff"/>
+  <text x="64" y="24" text-anchor="middle" font-size="14" font-family="Arial" fill="#ffffff">R2</text>
+</svg>

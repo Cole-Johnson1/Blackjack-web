@@ -80,6 +80,21 @@ The server already reads process.env.PORT, so it is deploy-ready.
 - GET /api/leaderboard: leaderboard data
 - GET /api/profile/:name: player profile by name
 
+## Admin Accounts
+
+- Built-in hardcoded admin account:
+   - Username: `Admin`
+   - Display Name: `Admin`
+   - PIN: `0000`
+- The `Admin` username and display name are reserved and cannot be registered by other players.
+- Set `ADMIN_USERNAMES` (comma-separated usernames) in your environment to grant admin privileges.
+- Example for Render: `ADMIN_USERNAMES=admin,cjgodd`
+- Admin-only management endpoints:
+   - POST /api/admin/accounts
+   - POST /api/admin/account/set-role
+   - POST /api/admin/account/set-disabled
+   - POST /api/admin/account/delete
+
 ## SmackJack Flow
 
 1. Launch app and sign in on the login screen (or create an account from the hidden register form).
