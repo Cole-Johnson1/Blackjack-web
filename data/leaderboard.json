@@ -24,12 +24,12 @@
   "Admin": {
     "name": "Admin",
     "balance": 1000,
-    "wins": 1,
-    "losses": 1,
+    "wins": 14,
+    "losses": 13,
     "pushes": 0,
-    "gamesPlayed": 2,
+    "gamesPlayed": 27,
     "totalEarnings": 0,
     "runsCompleted": 1,
-    "highestChapter": 2
+    "highestChapter": 7
   }
 }

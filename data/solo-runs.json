@@ -1,82 +1,134 @@
 {
   "Admin": {
-    "updatedAt": 1781029052957,
+    "updatedAt": 1781036088532,
     "game": {
       "runActive": true,
       "phase": "round-over",
-      "chapter": 2,
-      "roundInChapter": 0,
-      "totalRoundsPlayed": 11,
-      "roundsLost": 5,
-      "dealerTier": 2,
+      "chapter": 1,
+      "roundInChapter": 1,
+      "totalRoundsPlayed": 1,
+      "roundsLost": 0,
+      "dealerTier": 1,
       "deck": [
         {
           "suit": "D",
-          "value": "Q"
+          "value": "3"
+        },
+        {
+          "suit": "C",
+          "value": "5"
         },
         {
           "suit": "S",
-          "value": "6"
+          "value": "J"
         },
         {
-          "suit": "H",
-          "value": "8"
+          "suit": "C",
+          "value": "3"
         },
         {
-          "suit": "H",
+          "suit": "D",
           "value": "J"
         },
         {
           "suit": "S",
-          "value": "K"
+          "value": "Q"
+        },
+        {
+          "suit": "H",
+          "value": "2"
         },
         {
           "suit": "C",
-          "value": "8"
+          "value": "A"
         },
         {
-          "suit": "C",
-          "value": "4"
+          "suit": "H",
+          "value": "10"
         },
         {
           "suit": "S",
-          "value": "A"
+          "value": "3"
         },
         {
-          "suit": "D",
-          "value": "5"
-        },
-        {
-          "suit": "C",
+          "suit": "H",
           "value": "K"
         },
         {
+          "suit": "D",
+          "value": "2"
+        },
+        {
           "suit": "C",
-          "value": "A"
+          "value": "9"
+        },
+        {
+          "suit": "D",
+          "value": "8"
+        },
+        {
+          "suit": "S",
+          "value": "K"
         },
         {
           "suit": "D",
           "value": "7"
         },
         {
-          "suit": "C",
-          "value": "J"
-        },
-        {
-          "suit": "H",
-          "value": "5"
-        },
-        {
-          "suit": "C",
-          "value": "Q"
-        },
-        {
-          "suit": "D",
-          "value": "6"
+          "suit": "S",
+          "value": "A"
         },
         {
           "suit": "S",
-          "value": "9"
+          "value": "4"
+        },
+        {
+          "suit": "C",
+          "value": "7"
+        },
+        {
+          "suit": "H",
+          "value": "8"
+        },
+        {
+          "suit": "H",
+          "value": "4"
+        },
+        {
+          "suit": "S",
+          "value": "7"
+        },
+        {
+          "suit": "H",
+          "value": "6"
+        },
+        {
+          "suit": "H",
+          "value": "J"
+        },
+        {
+          "suit": "C",
+          "value": "K"
+        },
+        {
+          "suit": "H",
+          "value": "Q"
+        },
+        {
+          "suit": "S",
+          "value": "6"
+        },
+        {
+          "suit": "H",
+          "value": "7"
+        },
+        {
+          "suit": "C",
+          "value": "10"
+        },
+        {
+          "suit": "S",
+          "value": "5"
         },
         {
           "suit": "D",
@@ -84,7 +136,15 @@
         },
         {
           "suit": "D",
+          "value": "6"
+        },
+        {
+          "suit": "C",
           "value": "4"
+        },
+        {
+          "suit": "C",
+          "value": "J"
         },
         {
           "suit": "D",
@@ -92,164 +152,108 @@
         },
         {
           "suit": "H",
+          "value": "9"
+        },
+        {
+          "suit": "D",
           "value": "K"
         },
         {
+          "suit": "D",
+          "value": "5"
+        },
+        {
           "suit": "C",
-          "value": "7"
+          "value": "6"
         },
         {
           "suit": "S",
           "value": "10"
         },
         {
-          "suit": "C",
-          "value": "6"
-        },
-        {
-          "suit": "D",
-          "value": "J"
-        },
-        {
           "suit": "H",
-          "value": "2"
-        },
-        {
-          "suit": "H",
-          "value": "A"
-        },
-        {
-          "suit": "S",
           "value": "5"
         },
         {
-          "suit": "H",
-          "value": "6"
-        },
-        {
-          "suit": "S",
-          "value": "2"
-        },
-        {
-          "suit": "D",
+          "suit": "C",
           "value": "8"
         },
         {
-          "suit": "C",
-          "value": "5"
+          "suit": "D",
+          "value": "9"
         },
         {
-          "suit": "H",
+          "suit": "C",
+          "value": "2"
+        },
+        {
+          "suit": "D",
+          "value": "4"
+        },
+        {
+          "suit": "D",
           "value": "Q"
         },
         {
-          "suit": "C",
-          "value": "2"
-        },
-        {
           "suit": "H",
-          "value": "7"
-        },
-        {
-          "suit": "D",
-          "value": "9"
-        },
-        {
-          "suit": "C",
-          "value": "9"
-        },
-        {
-          "suit": "S",
-          "value": "7"
-        },
-        {
-          "suit": "H",
-          "value": "9"
-        },
-        {
-          "suit": "D",
-          "value": "2"
-        },
-        {
-          "suit": "S",
-          "value": "8"
-        },
-        {
-          "suit": "D",
           "value": "3"
         },
         {
           "suit": "S",
-          "value": "J"
-        },
-        {
-          "suit": "C",
-          "value": "10"
-        },
-        {
-          "suit": "H",
-          "value": "3"
-        },
-        {
-          "suit": "S",
-          "value": "4"
+          "value": "2"
         }
       ],
       "dealer": {
         "hand": [
           {
-            "suit": "H",
-            "value": "10"
+            "suit": "S",
+            "value": "8"
           },
           {
-            "suit": "H",
-            "value": "4"
-          },
-          {
-            "suit": "D",
-            "value": "K"
+            "suit": "S",
+            "value": "9"
           }
         ],
-        "busted": true,
+        "busted": false,
         "maxHealth": 28,
-        "health": 0,
+        "health": 23,
         "attackDamage": 5,
         "isBoss": false,
         "archetypeId": "crusher",
         "name": "Crusher Dealer"
       },
       "roundBanner": {
-        "text": "You Win!",
+        "text": "Blackjack!",
         "type": "win",
-        "until": 1781029054956
+        "until": 1781036091031
       },
       "autoNextTimeout": null,
       "blackjackTimeout": null,
       "turnTimeout": null,
       "turnOrder": [
-        "lWRLgLG8eNpOU2JbAAAB"
+        "a583qrIebjtwicKjAAAB"
       ],
-      "currentTurnIndex": 1,
+      "currentTurnIndex": 0,
       "lastRoundSummary": {
-        "chapter": 2,
-        "roundInChapter": 0,
-        "roundsLost": 5,
+        "chapter": 1,
+        "roundInChapter": 1,
+        "roundsLost": 0,
         "roundWon": true,
         "roundDraw": false,
-        "dealerScore": 24,
-        "dealerHealthAfter": 0,
+        "dealerScore": 17,
+        "dealerHealthAfter": 23,
         "results": [
           {
             "name": "Admin",
-            "result": "win",
-            "score": 16,
+            "result": "blackjack",
+            "score": 21,
             "handCount": 1,
-            "hp": 5,
-            "attackDamage": 7,
+            "hp": 30,
+            "attackDamage": 5,
             "mana": 6
           }
         ],
-        "resolvedAt": 1781029052957,
+        "resolvedAt": 1781036088532,
         "playerLost": false
       },
       "runResult": null,
@@ -258,42 +262,19 @@
     "playerRun": {
       "hand": [
         {
-          "suit": "S",
-          "value": "3"
+          "suit": "H",
+          "value": "A"
         },
         {
           "suit": "C",
-          "value": "3"
-        },
-        {
-          "suit": "S",
           "value": "Q"
         }
       ],
-      "standing": true,
+      "standing": false,
       "busted": false,
       "handMultiplier": 1,
-      "handActionCount": 1,
-      "resolvedHands": [
-        {
-          "cards": [
-            {
-              "suit": "S",
-              "value": "3"
-            },
-            {
-              "suit": "C",
-              "value": "3"
-            },
-            {
-              "suit": "S",
-              "value": "Q"
-            }
-          ],
-          "busted": false,
-          "multiplier": 1
-        }
-      ],
+      "handActionCount": 0,
+      "resolvedHands": [],
       "pendingSplitHands": [],
       "splitActive": false,
       "tempShield": 0,
@@ -306,23 +287,7 @@
       "focusSigilActive": false,
       "tranceStacks": 0,
       "unlockedAbilities": [],
-      "pendingBlessingOptions": [
-        {
-          "id": "battleTrance",
-          "name": "Battle Trance",
-          "description": "Unlock passive: Passive: using active abilities builds Trance stacks (+20% win damage each)."
-        },
-        {
-          "id": "splitTorrent",
-          "name": "Split Torrent",
-          "description": "Unlock passive: Passive: split-hand wins unleash extra combo strikes."
-        },
-        {
-          "id": "focusSigil",
-          "name": "Focus Sigil",
-          "description": "Unlock active: Empower this hand with extra combo damage if you win."
-        }
-      ],
+      "pendingBlessingOptions": [],
       "pendingShopChoices": 0,
       "pendingShopOptions": [],
       "relics": [],
@@ -330,16 +295,17 @@
         "openingAceForge": false,
         "cardUpgradeCharges": 0
       },
-      "health": 5,
+      "health": 30,
       "maxHealth": 30,
-      "attackDamage": 7,
+      "attackDamage": 5,
       "mana": 6,
       "maxMana": 6,
-      "xp": 0,
-      "level": 3,
-      "xpToNext": 20,
-      "pendingStatChoices": 1,
-      "pendingBlessingChoices": 2,
+      "xp": 5,
+      "level": 1,
+      "xpToNext": 10,
+      "handsPlayed": 1,
+      "pendingStatChoices": 0,
+      "pendingBlessingChoices": 0,
       "alive": true,
       "levelChoiceTimeout": null
     }
