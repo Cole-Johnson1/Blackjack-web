@@ -21,10 +21,10 @@ function renderRows(rows) {
 		tr.innerHTML = `
 			<td>#${row.rank}</td>
 			<td>${row.name}</td>
-			<td>${window.bj.formatMoney(row.balance)}</td>
+			<td>${row.level || 1}</td>
 			<td>${row.wins}</td>
 			<td>${row.losses}</td>
-			<td>${row.pushes}</td>
+			<td>${row.highestRound || 1}</td>
 			<td>${row.gamesPlayed}</td>
 		`;
 		leaderboardBody.appendChild(tr);

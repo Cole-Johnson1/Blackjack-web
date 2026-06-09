@@ -1270,14 +1270,45 @@ function isBlackjack(hand) {
 function getSortedLeaderboard(limit = null) {
     syncProfilesWithAccounts();
 
+    const accountByDisplayName = new Map(
+        Object.values(accounts).map(account => [
+            String(account.displayName || "").trim().toLowerCase(),
+            account
+        ])
+    );
+
     const rows = Object.values(profiles)
+        .map(entry => {
+            const wins = Number(entry.wins || 0);
+            const losses = Number(entry.losses || 0);
+            const highestRound = Math.max(1, Number(entry.highestChapter || 1));
+            const account = accountByDisplayName.get(String(entry.name || "").trim().toLowerCase()) || null;
+            const level = Math.max(1, Number(account && account.accountLevel ? account.accountLevel : 1));
+            const winRate = losses > 0 ? (wins / losses) : wins;
+            const rankingValue = winRate * highestRound;
+
+            return {
+                name: entry.name,
+                level,
+                wins,
+                losses,
+                gamesPlayed: Number(entry.gamesPlayed || 0),
+                highestRound,
+                winRate,
+                rankingValue
+            };
+        })
         .sort((a, b) => {
-            if (b.runsCompleted !== a.runsCompleted) {
-                return b.runsCompleted - a.runsCompleted;
+            if (b.rankingValue !== a.rankingValue) {
+                return b.rankingValue - a.rankingValue;
             }
 
-            if (b.highestChapter !== a.highestChapter) {
-                return b.highestChapter - a.highestChapter;
+            if (b.winRate !== a.winRate) {
+                return b.winRate - a.winRate;
+            }
+
+            if (b.highestRound !== a.highestRound) {
+                return b.highestRound - a.highestRound;
             }
 
             return a.name.localeCompare(b.name);
@@ -1285,14 +1316,12 @@ function getSortedLeaderboard(limit = null) {
         .map((entry, index) => ({
             rank: index + 1,
             name: entry.name,
-            balance: entry.balance,
+            level: entry.level,
             wins: entry.wins,
             losses: entry.losses,
-            pushes: entry.pushes,
             gamesPlayed: entry.gamesPlayed,
-            totalEarnings: entry.totalEarnings,
-            runsCompleted: entry.runsCompleted,
-            highestChapter: entry.highestChapter
+            highestRound: entry.highestRound,
+            rankingValue: Number(entry.rankingValue.toFixed(4))
         }));
 
     if (!Number.isFinite(limit) || limit <= 0) {
