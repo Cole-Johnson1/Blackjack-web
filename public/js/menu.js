@@ -70,17 +70,7 @@ function setupMenuKeyboardNavigation() {
 }
 
 async function apiLogout() {
-    const token = window.bjAuth.getToken();
-
-    if (!token) {
-        return;
-    }
-
-    await fetch("/api/logout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token })
-    }).catch(() => {});
+    await window.bjApi.requestAuthedJson("/api/logout").catch(() => {});
 }
 
 function showMessage(text, isError = false) {
@@ -92,26 +82,19 @@ function showMessage(text, isError = false) {
 async function refreshSinglePlayerEntry() {
     hasSavedSoloRun = false;
 
-    const token = window.bjAuth.getToken();
-
-    if (!token) {
+    if (!window.bjAuth.getToken()) {
         singlePlayerButton.textContent = "Single Player";
         return;
     }
 
     try {
-        const response = await fetch("/api/solo-run-status", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token })
-        });
+        const { response, data } = await window.bjApi.requestAuthedJson("/api/solo-run-status");
 
         if (!response.ok) {
             singlePlayerButton.textContent = "Single Player";
             return;
         }
 
-        const data = await response.json();
         hasSavedSoloRun = !!data.hasSavedRun;
         singlePlayerButton.textContent = hasSavedSoloRun ? "Continue" : "Single Player";
     }
@@ -123,23 +106,17 @@ async function refreshSinglePlayerEntry() {
 async function refreshAdminEntry() {
     adminPanelButton.hidden = true;
 
-    const token = window.bjAuth.getToken();
-    if (!token) {
+    if (!window.bjAuth.getToken()) {
         return;
     }
 
     try {
-        const response = await fetch("/api/account", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token })
-        });
+        const { response, data } = await window.bjApi.requestAuthedJson("/api/account");
 
         if (!response.ok) {
             return;
         }
 
-        const data = await response.json();
         adminPanelButton.hidden = !data.isAdmin;
     }
     catch {
@@ -184,9 +161,7 @@ singlePlayerButton.addEventListener("click", () => {
 });
 
 resetRunButton.addEventListener("click", async () => {
-    const token = window.bjAuth.getToken();
-
-    if (!token) {
+    if (!window.bjAuth.getToken()) {
         showMessage("Session expired. Please log in again.", true);
         return;
     }
@@ -194,11 +169,7 @@ resetRunButton.addEventListener("click", async () => {
     resetRunButton.disabled = true;
 
     try {
-        const response = await fetch("/api/solo-run-reset", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token })
-        });
+        const { response } = await window.bjApi.requestAuthedJson("/api/solo-run-reset");
 
         if (!response.ok) {
             showMessage("Could not reset run right now.", true);

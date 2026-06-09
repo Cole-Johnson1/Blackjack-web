@@ -25,24 +25,17 @@ function refreshThemeButtons() {
 }
 
 async function loadRemoteOptions() {
-    const token = window.bjAuth.getToken();
-
-    if (!token) {
+    if (!window.bjAuth.getToken()) {
         return;
     }
 
     try {
-        const response = await fetch("/api/options", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token })
-        });
+        const { response, data } = await window.bjApi.requestAuthedJson("/api/options");
 
         if (!response.ok) {
             return;
         }
 
-        const data = await response.json();
         const theme = data && data.options ? data.options.theme : "light";
 
         if (window.bjTheme && (theme === "light" || theme === "dark")) {
@@ -56,19 +49,12 @@ async function loadRemoteOptions() {
 }
 
 async function saveRemoteTheme(theme) {
-    const token = window.bjAuth.getToken();
-
-    if (!token) {
+    if (!window.bjAuth.getToken()) {
         return;
     }
 
-    await fetch("/api/options/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            token,
-            options: { theme }
-        })
+    await window.bjApi.requestAuthedJson("/api/options/update", {
+        options: { theme }
     }).catch(() => {});
 }
 

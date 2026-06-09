@@ -16,14 +16,7 @@ function showAdminMessage(text, isError = false) {
 }
 
 async function postAdmin(path, payload) {
-    const token = window.bjAuth.getToken();
-    const response = await fetch(path, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, ...payload })
-    });
-
-    const data = await response.json().catch(() => ({}));
+    const { response, data } = await window.bjApi.requestAuthedJson(path, payload);
 
     if (!response.ok) {
         throw new Error(data.error || "Admin request failed.");
@@ -33,19 +26,11 @@ async function postAdmin(path, payload) {
 }
 
 async function loadCurrentAccount() {
-    const token = window.bjAuth.getToken();
-
-    const response = await fetch("/api/account", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token })
-    });
+    const { response, data } = await window.bjApi.requestAuthedJson("/api/account");
 
     if (!response.ok) {
         throw new Error("Session expired.");
     }
-
-    const data = await response.json();
 
     if (!data.isAdmin) {
         throw new Error("Admin privileges required.");

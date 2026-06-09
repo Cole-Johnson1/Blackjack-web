@@ -64,12 +64,11 @@ loginForm.addEventListener("submit", async event => {
     const rememberLogin = !!rememberLoginCheckbox.checked;
 
     try {
-        const res = await fetch("/api/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, pin, rememberLogin })
+        const { response: res, data } = await window.bjApi.requestJson("/api/login", {
+            username,
+            pin,
+            rememberLogin
         });
-        const data = await res.json();
 
         if (!res.ok) {
             showMessage(data.error || "Login failed.", true);
@@ -97,12 +96,11 @@ registerForm.addEventListener("submit", async event => {
     }
 
     try {
-        const res = await fetch("/api/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, displayName, pin })
+        const { response: res, data } = await window.bjApi.requestJson("/api/register", {
+            username,
+            displayName,
+            pin
         });
-        const data = await res.json();
 
         if (!res.ok) {
             showMessage(data.error || "Registration failed.", true);
@@ -111,12 +109,11 @@ registerForm.addEventListener("submit", async event => {
 
         showMessage("Account created! Signing you in...");
 
-        const loginRes = await fetch("/api/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, pin, rememberLogin: true })
+        const { response: loginRes, data: loginData } = await window.bjApi.requestJson("/api/login", {
+            username,
+            pin,
+            rememberLogin: true
         });
-        const loginData = await loginRes.json();
 
         if (!loginRes.ok) {
             showMessage("Account created. Please log in.", false);

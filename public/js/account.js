@@ -82,19 +82,12 @@ function renderAvatarChoices() {
 }
 
 async function loadAccount() {
-    const token = window.bjAuth.getToken();
-
-    const response = await fetch("/api/account", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token })
-    });
+    const { response, data } = await window.bjApi.requestAuthedJson("/api/account");
 
     if (!response.ok) {
         throw new Error("Unable to load account.");
     }
 
-    const data = await response.json();
     accountUsername.value = data.username || "";
     accountDisplayName.value = data.displayName || "";
     availableProfilePictures = Array.isArray(data.profilePictures) ? data.profilePictures : [];
@@ -140,19 +133,12 @@ accountForm.addEventListener("submit", async event => {
     }
 
     try {
-        const response = await fetch("/api/account/update", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                token,
-                displayName,
-                selectedProfilePictureId,
-                currentPin,
-                newPin
-            })
+        const { response, data } = await window.bjApi.requestAuthedJson("/api/account/update", {
+            displayName,
+            selectedProfilePictureId,
+            currentPin,
+            newPin
         });
-
-        const data = await response.json();
 
         if (!response.ok) {
             showMessage(data.error || "Unable to update account.", true);
