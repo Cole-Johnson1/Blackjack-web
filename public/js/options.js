@@ -24,6 +24,54 @@ function refreshThemeButtons() {
     darkModeButton.disabled = active === "dark";
 }
 
+async function loadRemoteOptions() {
+    const token = window.bjAuth.getToken();
+
+    if (!token) {
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/options", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token })
+        });
+
+        if (!response.ok) {
+            return;
+        }
+
+        const data = await response.json();
+        const theme = data && data.options ? data.options.theme : "light";
+
+        if (window.bjTheme && (theme === "light" || theme === "dark")) {
+            window.bjTheme.setTheme(theme);
+            refreshThemeButtons();
+        }
+    }
+    catch {
+        // Ignore remote options failures and keep local behavior.
+    }
+}
+
+async function saveRemoteTheme(theme) {
+    const token = window.bjAuth.getToken();
+
+    if (!token) {
+        return;
+    }
+
+    await fetch("/api/options/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            token,
+            options: { theme }
+        })
+    }).catch(() => {});
+}
+
 window.bjAuth.ensureSession().then(isValid => {
     if (!isValid) {
         window.bjAuth.clearAuth();
@@ -33,6 +81,7 @@ window.bjAuth.ensureSession().then(isValid => {
 
     refreshRememberStatus();
     refreshThemeButtons();
+    loadRemoteOptions();
 });
 
 clearSavedLoginButton.addEventListener("click", () => {
@@ -51,6 +100,7 @@ lightModeButton.addEventListener("click", () => {
     if (window.bjTheme) {
         window.bjTheme.setTheme("light");
     }
+    saveRemoteTheme("light");
     refreshThemeButtons();
     showMessage("Light mode enabled.");
 });
@@ -59,6 +109,7 @@ darkModeButton.addEventListener("click", () => {
     if (window.bjTheme) {
         window.bjTheme.setTheme("dark");
     }
+    saveRemoteTheme("dark");
     refreshThemeButtons();
     showMessage("Dark mode enabled.");
 });

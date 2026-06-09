@@ -207,3 +207,35 @@ test("newly registered account appears on leaderboard", async () => {
     const names = (leaderboard.body.leaderboard || []).map(row => row.name);
     assert.ok(names.includes(displayName));
 });
+
+test("options endpoints persist theme preferences", async () => {
+    const username = uniqueUser("opt");
+    const displayName = `Opt${username}`.slice(0, 20);
+
+    const register = await post("/api/register", {
+        username,
+        displayName,
+        pin: "8899"
+    });
+    assert.equal(register.response.status, 201);
+
+    const login = await post("/api/login", {
+        username,
+        pin: "8899",
+        rememberLogin: false
+    });
+    assert.equal(login.response.status, 200);
+
+    const update = await post("/api/options/update", {
+        token: login.body.token,
+        options: { theme: "dark" }
+    });
+    assert.equal(update.response.status, 200);
+    assert.equal(update.body.options.theme, "dark");
+
+    const read = await post("/api/options", {
+        token: login.body.token
+    });
+    assert.equal(read.response.status, 200);
+    assert.equal(read.body.options.theme, "dark");
+});

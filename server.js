@@ -406,6 +406,14 @@ function ensureAccountDefaults(account) {
         account.isDisabled = false;
     }
 
+    if (!account.options || typeof account.options !== "object") {
+        account.options = {};
+    }
+
+    if (account.options.theme !== "dark" && account.options.theme !== "light") {
+        account.options.theme = "light";
+    }
+
     if (ADMIN_USERNAMES.has(String(account.username || "").toLowerCase())) {
         account.isAdmin = true;
     }
@@ -2641,7 +2649,50 @@ app.post("/api/account", (req, res) => {
         accountXp: account.accountXp,
         accountXpToNext: account.accountXpToNext,
         accountTotalXp: account.accountTotalXp,
+        options: account.options,
         profilePictures: getPublicProfilePicturesForAccount(account)
+    });
+});
+
+app.post("/api/options", (req, res) => {
+    const { token } = req.body || {};
+    const { session, account } = getAccountFromToken(token);
+
+    if (!session || !account) {
+        return res.status(401).json({ error: "Session expired." });
+    }
+
+    return res.json({
+        ok: true,
+        options: account.options || { theme: "light" }
+    });
+});
+
+app.post("/api/options/update", (req, res) => {
+    const { token, options } = req.body || {};
+    const { session, account } = getAccountFromToken(token);
+
+    if (!session || !account) {
+        return res.status(401).json({ error: "Session expired." });
+    }
+
+    const candidate = options && typeof options === "object" ? options : {};
+
+    if (candidate.theme !== undefined) {
+        const theme = String(candidate.theme || "").trim().toLowerCase();
+
+        if (theme !== "light" && theme !== "dark") {
+            return res.status(400).json({ error: "Theme must be 'light' or 'dark'." });
+        }
+
+        account.options.theme = theme;
+    }
+
+    saveAccounts();
+
+    return res.json({
+        ok: true,
+        options: account.options
     });
 });
 

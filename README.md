@@ -84,6 +84,8 @@ SmackJack now includes a PostgreSQL schema for persistent account/game storage.
 - `profiles`: leaderboard/profile stats
 - `solo_runs`: saved solo run state blobs
 - `game_runs`: run history records
+- `session_tokens`: session/remember-token records for migration and auditing
+- `user_options`: persistent user preferences (theme, UI/audio defaults)
 
 ### Setup Commands
 
@@ -104,6 +106,13 @@ SmackJack now includes a PostgreSQL schema for persistent account/game storage.
 4. Run `npm run db:sync` once to import current data files.
 
 These scripts are idempotent: you can rerun them safely.
+
+## Options Persistence
+
+- Theme preference is now persisted server-side through:
+   - `POST /api/options`
+   - `POST /api/options/update`
+- The options page syncs the theme from the server after login and writes updates back.
 
 ## APIs
 

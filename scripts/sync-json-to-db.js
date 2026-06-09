@@ -153,6 +153,93 @@ async function syncSoloRuns(client, soloRuns) {
     }
 }
 
+async function syncUserOptions(client, accounts) {
+    for (const [username, account] of Object.entries(accounts)) {
+        const options = account && account.options && typeof account.options === "object"
+            ? account.options
+            : {};
+
+        const theme = options.theme === "dark" ? "dark" : "light";
+        const rememberLogin = Array.isArray(account && account.rememberTokens) && account.rememberTokens.length > 0;
+
+        await client.query(
+            `
+            INSERT INTO user_options (
+                username,
+                theme,
+                remember_login,
+                ui_scale,
+                sfx_volume,
+                music_volume,
+                updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, NOW())
+            ON CONFLICT (username) DO UPDATE
+            SET
+                theme = EXCLUDED.theme,
+                remember_login = EXCLUDED.remember_login,
+                ui_scale = EXCLUDED.ui_scale,
+                sfx_volume = EXCLUDED.sfx_volume,
+                music_volume = EXCLUDED.music_volume,
+                updated_at = NOW()
+            `,
+            [
+                username,
+                theme,
+                rememberLogin,
+                100,
+                100,
+                100
+            ]
+        );
+    }
+}
+
+async function syncSessionTokens(client, accounts) {
+    await client.query("DELETE FROM session_tokens");
+
+    for (const [username, account] of Object.entries(accounts)) {
+        const tokens = Array.isArray(account && account.rememberTokens) ? account.rememberTokens : [];
+        const displayName = String(account && account.displayName ? account.displayName : username);
+
+        for (const token of tokens) {
+            const tokenHash = String(token && token.tokenHash ? token.tokenHash : "");
+
+            if (!tokenHash) {
+                continue;
+            }
+
+            await client.query(
+                `
+                INSERT INTO session_tokens (
+                    token,
+                    username,
+                    display_name,
+                    created_at,
+                    expires_at,
+                    updated_at
+                )
+                VALUES ($1, $2, $3, $4, $5, NOW())
+                ON CONFLICT (token) DO UPDATE
+                SET
+                    username = EXCLUDED.username,
+                    display_name = EXCLUDED.display_name,
+                    created_at = EXCLUDED.created_at,
+                    expires_at = EXCLUDED.expires_at,
+                    updated_at = NOW()
+                `,
+                [
+                    tokenHash,
+                    username,
+                    displayName,
+                    Number(token && token.createdAt ? token.createdAt : Date.now()),
+                    Number(token && token.expiresAt ? token.expiresAt : Date.now())
+                ]
+            );
+        }
+    }
+}
+
 async function main() {
     const root = path.join(__dirname, "..");
     const accountsPath = path.join(root, "data", "accounts.json");
@@ -171,6 +258,8 @@ async function main() {
         await syncAccounts(client, accounts);
         await syncProfiles(client, profiles);
         await syncSoloRuns(client, soloRuns);
+        await syncUserOptions(client, accounts);
+        await syncSessionTokens(client, accounts);
         await client.query("COMMIT");
 
         console.log(

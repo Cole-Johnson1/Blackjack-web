@@ -40,6 +40,25 @@ CREATE TABLE IF NOT EXISTS solo_runs (
     updated_ts TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS session_tokens (
+    token TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    created_at BIGINT NOT NULL,
+    expires_at BIGINT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS user_options (
+    username TEXT PRIMARY KEY,
+    theme TEXT NOT NULL DEFAULT 'light',
+    remember_login BOOLEAN NOT NULL DEFAULT FALSE,
+    ui_scale INTEGER NOT NULL DEFAULT 100,
+    sfx_volume INTEGER NOT NULL DEFAULT 100,
+    music_volume INTEGER NOT NULL DEFAULT 100,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS game_runs (
     id BIGSERIAL PRIMARY KEY,
     room_code TEXT,
@@ -57,3 +76,4 @@ CREATE INDEX IF NOT EXISTS idx_accounts_display_name ON accounts (display_name);
 CREATE INDEX IF NOT EXISTS idx_profiles_runs_completed ON profiles (runs_completed DESC);
 CREATE INDEX IF NOT EXISTS idx_profiles_highest_chapter ON profiles (highest_chapter DESC);
 CREATE INDEX IF NOT EXISTS idx_game_runs_created_at ON game_runs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_session_tokens_username ON session_tokens (username);
