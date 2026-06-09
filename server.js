@@ -3388,6 +3388,40 @@ app.post("/api/admin/account/delete", (req, res) => {
     return res.json({ ok: true });
 });
 
+app.post("/api/admin/account/clear", (req, res) => {
+    const { token } = req.body || {};
+    const admin = requireAdminAccountFromToken(token);
+
+    if (!admin.ok) {
+        return res.status(admin.status).json({ error: admin.error });
+    }
+
+    let removedCount = 0;
+
+    for (const [key, account] of Object.entries(accounts)) {
+        if (!account || account.username === BUILT_IN_ADMIN_USERNAME) {
+            continue;
+        }
+
+        deleteSessionsForUsername(account.username);
+        clearSoloRunForPlayer(account.displayName);
+
+        if (profiles[account.displayName]) {
+            delete profiles[account.displayName];
+        }
+
+        delete accounts[key];
+        removedCount += 1;
+    }
+
+    syncProfilesWithAccounts();
+    saveProfiles();
+    saveAccounts();
+    io.emit("leaderboardUpdated", getSortedLeaderboard());
+
+    return res.json({ ok: true, removedCount });
+});
+
 app.post("/api/solo-run-status", (req, res) => {
     const { token } = req.body || {};
     const session = getSession(String(token || ""));

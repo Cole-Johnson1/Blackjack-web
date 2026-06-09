@@ -239,3 +239,43 @@ test("options endpoints persist theme preferences", async () => {
     assert.equal(read.response.status, 200);
     assert.equal(read.body.options.theme, "dark");
 });
+
+test("admin can clear accounts while preserving built-in Admin", async () => {
+    const userA = uniqueUser("clr");
+    const userB = uniqueUser("clr");
+
+    const registerA = await post("/api/register", {
+        username: userA,
+        displayName: `CA${userA}`.slice(0, 20),
+        pin: "1111"
+    });
+    assert.equal(registerA.response.status, 201);
+
+    const registerB = await post("/api/register", {
+        username: userB,
+        displayName: `CB${userB}`.slice(0, 20),
+        pin: "2222"
+    });
+    assert.equal(registerB.response.status, 201);
+
+    const adminLogin = await post("/api/login", {
+        username: "Admin",
+        pin: "0000",
+        rememberLogin: false
+    });
+    assert.equal(adminLogin.response.status, 200);
+
+    const clear = await post("/api/admin/account/clear", {
+        token: adminLogin.body.token
+    });
+    assert.equal(clear.response.status, 200);
+    assert.ok(Number(clear.body.removedCount) >= 2);
+
+    const list = await post("/api/admin/accounts", {
+        token: adminLogin.body.token
+    });
+    assert.equal(list.response.status, 200);
+    assert.equal(Array.isArray(list.body.accounts), true);
+    assert.equal(list.body.accounts.length, 1);
+    assert.equal(String(list.body.accounts[0].username), "admin");
+});

@@ -5,6 +5,7 @@ if (!window.bjAuth) {
 const adminAccountsBody = document.getElementById("adminAccountsBody");
 const adminMessage = document.getElementById("adminMessage");
 const adminRefreshButton = document.getElementById("adminRefreshButton");
+const adminClearAccountsButton = document.getElementById("adminClearAccountsButton");
 
 let currentUsername = "";
 
@@ -171,3 +172,20 @@ window.bjAuth.ensureSession().then(async isValid => {
 });
 
 adminRefreshButton.addEventListener("click", loadAccounts);
+
+adminClearAccountsButton.addEventListener("click", async () => {
+    const confirmed = window.confirm("Clear all accounts from the table? The built-in Admin account will be preserved.");
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const result = await postAdmin("/api/admin/account/clear", {});
+        await loadAccounts();
+        showAdminMessage(`Cleared ${Number(result.removedCount || 0)} accounts.`);
+    }
+    catch (error) {
+        showAdminMessage(error.message, true);
+    }
+});
