@@ -8,7 +8,7 @@
     "start:web": "node server.js",
     "dev": "node server.js",
     "electron": "electron electron/main.js",
-    "test": "echo \"No automated tests configured yet\""
+    "test": "node --test test/*.test.js"
   },
   "keywords": [],
   "author": "",

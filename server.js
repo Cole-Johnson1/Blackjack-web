@@ -160,6 +160,20 @@ function saveAccounts() {
     }
 }
 
+function ensureAccountDefaults(account) {
+    if (!account) {
+        return;
+    }
+
+    if (!Array.isArray(account.rememberTokens)) {
+        account.rememberTokens = [];
+    }
+
+    if (typeof account.profilePicture !== "string") {
+        account.profilePicture = "";
+    }
+}
+
 function loadSoloRuns() {
     try {
         if (!fs.existsSync(SOLO_RUNS_FILE)) {
@@ -270,6 +284,61 @@ function getSession(token) {
 
     return session;
 }
+
+function getAccountFromToken(token) {
+    const session = getSession(String(token || ""));
+
+    if (!session) {
+        return { session: null, account: null };
+    }
+
+    const account = accounts[session.username] || null;
+    if (account) {
+        ensureAccountDefaults(account);
+    }
+
+    return { session, account };
+}
+
+function migrateDisplayName(oldName, newName) {
+    if (!oldName || !newName || oldName === newName) {
+        return;
+    }
+
+    if (profiles[oldName]) {
+        if (profiles[newName]) {
+            return;
+        }
+
+        profiles[newName] = profiles[oldName];
+        profiles[newName].name = newName;
+        delete profiles[oldName];
+        saveProfiles();
+    }
+
+    if (soloRuns[oldName]) {
+        soloRuns[newName] = soloRuns[oldName];
+        delete soloRuns[oldName];
+        saveSoloRuns();
+    }
+}
+
+function updateConnectedPlayerName(username, nextDisplayName) {
+    Object.values(players).forEach(player => {
+        if (!player) {
+            return;
+        }
+
+        const socket = io.sockets.sockets.get(player.id);
+        const playerUsername = socket && socket.data ? socket.data.username : "";
+
+        if (playerUsername === username) {
+            player.name = nextDisplayName;
+        }
+    });
+}
+
+Object.values(accounts).forEach(ensureAccountDefaults);
 
 function recordLoginAttempt(ip) {
     const now = Date.now();
@@ -467,6 +536,7 @@ function makePlayerRunState() {
         handActionCount: 0,
         resolvedHands: [],
         pendingSplitHands: [],
+        splitActive: false,
         tempShield: 0,
         usedManaSurge: false,
         usedAbilityThisHand: false,
@@ -478,7 +548,7 @@ function makePlayerRunState() {
         maxMana: BASE_PLAYER.maxMana,
         xp: 0,
         level: 1,
-        xpToNext: 100,
+        xpToNext: calculateXpToNext(1),
         pendingStatChoices: 0,
         pendingBlessingChoices: 0,
         alive: true
@@ -650,6 +720,13 @@ function getPublicPlayer(player) {
             busted: run.busted,
             handMultiplier: run.handMultiplier,
             handActionCount: run.handActionCount,
+            resolvedHands: run.resolvedHands.map(hand => ({
+                cards: Array.isArray(hand.cards) ? [...hand.cards] : [],
+                busted: !!hand.busted,
+                multiplier: hand.multiplier || 1
+            })),
+            pendingSplitHands: run.pendingSplitHands.map(hand => Array.isArray(hand) ? [...hand] : []),
+            splitActive: !!run.splitActive,
             splitHandsRemaining: run.pendingSplitHands.length,
             resolvedHandCount: run.resolvedHands.length,
             canDouble,
@@ -891,7 +968,7 @@ function anyPendingChoices(room) {
 }
 
 function calculateXpToNext(level) {
-    return 100 + (level - 1) * 35;
+    return 10 + (level - 1) * 5;
 }
 
 function grantXp(player, amount) {
@@ -1222,6 +1299,7 @@ function startRoundInternal(room, socket = null) {
         player.run.handActionCount = 0;
         player.run.resolvedHands = [];
         player.run.pendingSplitHands = [];
+        player.run.splitActive = false;
         player.run.tempShield = 0;
         player.run.usedManaSurge = false;
         player.run.mana = Math.min(player.run.maxMana, player.run.mana + 2);
@@ -1405,7 +1483,7 @@ function settleRound(room) {
             const emberBonus = player.run.emberStrikeActive ? 2 : 1;
             const totalDamage = winHands.reduce((sum, x) => sum + (player.run.attackDamage * x.multiplier * emberBonus), 0);
             room.game.dealer.health = Math.max(0, room.game.dealer.health - totalDamage);
-            grantXp(player, 25 * winHands.length);
+            grantXp(player, 5);
         }
         else if (lossHands.length === handOutcomes.length) {
             result = "loss";
@@ -1608,6 +1686,7 @@ app.post("/api/register", async (req, res) => {
             username: key,
             displayName: trimmedDisplay,
             pinHash,
+            profilePicture: "",
             createdAt: Date.now()
         };
         saveAccounts();
@@ -1716,6 +1795,113 @@ app.post("/api/session", (req, res) => {
     }
 
     return res.json({ valid: true, displayName: session.displayName });
+});
+
+app.post("/api/account", (req, res) => {
+    const { token } = req.body || {};
+    const { session, account } = getAccountFromToken(token);
+
+    if (!session || !account) {
+        return res.status(401).json({ error: "Session expired." });
+    }
+
+    return res.json({
+        username: account.username,
+        displayName: account.displayName,
+        profilePicture: account.profilePicture || ""
+    });
+});
+
+app.post("/api/account/update", async (req, res) => {
+    const {
+        token,
+        displayName,
+        profilePicture,
+        currentPin,
+        newPin
+    } = req.body || {};
+
+    const { session, account } = getAccountFromToken(token);
+
+    if (!session || !account) {
+        return res.status(401).json({ error: "Session expired." });
+    }
+
+    const updates = {};
+
+    if (displayName !== undefined) {
+        const nextDisplay = String(displayName || "").trim();
+        if (!nextDisplay || !/^[A-Za-z0-9 _-]{2,20}$/.test(nextDisplay)) {
+            return res.status(400).json({ error: "Display name must be 2-20 characters (letters, numbers, spaces, _ or -)." });
+        }
+
+        if (nextDisplay !== account.displayName && profiles[nextDisplay]) {
+            return res.status(409).json({ error: "Display name is already in use." });
+        }
+
+        updates.displayName = nextDisplay;
+    }
+
+    if (profilePicture !== undefined) {
+        const nextPicture = String(profilePicture || "").trim();
+
+        if (nextPicture.length > 250000) {
+            return res.status(400).json({ error: "Profile picture is too large." });
+        }
+
+        updates.profilePicture = nextPicture;
+    }
+
+    if (newPin !== undefined && String(newPin || "").length > 0) {
+        if (!currentPin) {
+            return res.status(400).json({ error: "Current PIN is required to change PIN." });
+        }
+
+        if (!/^\d{4,12}$/.test(String(newPin))) {
+            return res.status(400).json({ error: "New PIN must be 4-12 digits." });
+        }
+
+        const match = await bcrypt.compare(String(currentPin), account.pinHash);
+        if (!match) {
+            return res.status(401).json({ error: "Current PIN is incorrect." });
+        }
+
+        updates.pinHash = await bcrypt.hash(String(newPin), BCRYPT_ROUNDS);
+    }
+
+    const oldDisplayName = account.displayName;
+
+    if (updates.displayName) {
+        account.displayName = updates.displayName;
+        session.displayName = updates.displayName;
+
+        sessions.forEach(sess => {
+            if (sess.username === account.username) {
+                sess.displayName = updates.displayName;
+            }
+        });
+
+        updateConnectedPlayerName(account.username, updates.displayName);
+        migrateDisplayName(oldDisplayName, updates.displayName);
+    }
+
+    if (updates.profilePicture !== undefined) {
+        account.profilePicture = updates.profilePicture;
+    }
+
+    if (updates.pinHash) {
+        account.pinHash = updates.pinHash;
+    }
+
+    saveAccounts();
+
+    io.emit("leaderboardUpdated", getSortedLeaderboard());
+
+    return res.json({
+        ok: true,
+        displayName: account.displayName,
+        profilePicture: account.profilePicture || ""
+    });
 });
 
 app.post("/api/solo-run-status", (req, res) => {
@@ -2188,6 +2374,7 @@ io.on("connection", socket => {
 
         player.run.hand = first;
         player.run.pendingSplitHands = [second];
+        player.run.splitActive = true;
         player.run.standing = false;
         player.run.busted = false;
         player.run.handMultiplier = 1;
@@ -2361,6 +2548,28 @@ io.on("connection", socket => {
     });
 });
 
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+function startServer(port = PORT) {
+    return server.listen(port, () => {
+        const assigned = server.address() && server.address().port ? server.address().port : port;
+        console.log(`Server running on port ${assigned}`);
+    });
+}
+
+if (require.main === module) {
+    startServer(PORT);
+}
+
+module.exports = {
+    app,
+    server,
+    startServer,
+    __testOnly: {
+        makePlayerRunState,
+        calculateXpToNext,
+        grantXp,
+        applyLevelUpStat,
+        getCardValue,
+        getHandValue,
+        isBlackjack
+    }
+};

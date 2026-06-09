@@ -1,174 +1,50 @@
 {
   "admin": {
-    "updatedAt": 1780962733401,
+    "updatedAt": 1780964631571,
     "game": {
       "runActive": true,
-      "phase": "in-round",
+      "phase": "round-over",
       "chapter": 1,
-      "roundInChapter": 4,
-      "totalRoundsPlayed": 8,
-      "roundsLost": 2,
+      "roundInChapter": 2,
+      "totalRoundsPlayed": 3,
+      "roundsLost": 1,
       "dealerTier": 2,
       "deck": [
         {
           "suit": "C",
-          "value": "4"
+          "value": "K"
         },
         {
           "suit": "S",
-          "value": "A"
-        },
-        {
-          "suit": "C",
-          "value": "6"
-        },
-        {
-          "suit": "C",
-          "value": "J"
-        },
-        {
-          "suit": "C",
-          "value": "Q"
-        },
-        {
-          "suit": "D",
-          "value": "2"
-        },
-        {
-          "suit": "H",
           "value": "7"
         },
         {
+          "suit": "C",
+          "value": "A"
+        },
+        {
           "suit": "S",
-          "value": "5"
+          "value": "10"
         },
         {
           "suit": "D",
-          "value": "7"
-        },
-        {
-          "suit": "H",
-          "value": "8"
-        },
-        {
-          "suit": "H",
           "value": "6"
-        },
-        {
-          "suit": "D",
-          "value": "5"
-        },
-        {
-          "suit": "D",
-          "value": "4"
-        },
-        {
-          "suit": "D",
-          "value": "K"
-        },
-        {
-          "suit": "H",
-          "value": "A"
-        },
-        {
-          "suit": "C",
-          "value": "3"
-        },
-        {
-          "suit": "S",
-          "value": "K"
-        },
-        {
-          "suit": "C",
-          "value": "A"
-        },
-        {
-          "suit": "C",
-          "value": "10"
-        },
-        {
-          "suit": "H",
-          "value": "10"
-        },
-        {
-          "suit": "H",
-          "value": "4"
-        },
-        {
-          "suit": "D",
-          "value": "3"
-        },
-        {
-          "suit": "C",
-          "value": "K"
-        },
-        {
-          "suit": "H",
-          "value": "J"
-        },
-        {
-          "suit": "H",
-          "value": "K"
-        },
-        {
-          "suit": "S",
-          "value": "4"
-        },
-        {
-          "suit": "D",
-          "value": "8"
-        },
-        {
-          "suit": "D",
-          "value": "10"
-        },
-        {
-          "suit": "D",
-          "value": "A"
-        },
-        {
-          "suit": "C",
-          "value": "5"
-        },
-        {
-          "suit": "H",
-          "value": "Q"
         },
         {
           "suit": "C",
           "value": "9"
         },
         {
-          "suit": "S",
-          "value": "Q"
-        },
-        {
           "suit": "H",
-          "value": "5"
-        },
-        {
-          "suit": "S",
-          "value": "8"
-        },
-        {
-          "suit": "S",
-          "value": "2"
+          "value": "4"
         },
         {
           "suit": "C",
-          "value": "2"
-        },
-        {
-          "suit": "C",
-          "value": "8"
-        },
-        {
-          "suit": "C",
-          "value": "7"
+          "value": "6"
         },
         {
           "suit": "D",
-          "value": "6"
+          "value": "J"
         },
         {
           "suit": "S",
@@ -176,76 +52,508 @@
         },
         {
           "suit": "S",
-          "value": "7"
+          "value": "5"
         },
         {
-          "suit": "D",
+          "suit": "C",
+          "value": "J"
+        },
+        {
+          "suit": "H",
           "value": "9"
         },
         {
+          "suit": "H",
+          "value": "J"
+        },
+        {
           "suit": "S",
+          "value": "J"
+        },
+        {
+          "suit": "S",
+          "value": "9"
+        },
+        {
+          "suit": "C",
+          "value": "2"
+        },
+        {
+          "suit": "H",
+          "value": "Q"
+        },
+        {
+          "suit": "H",
           "value": "10"
         },
         {
-          "suit": "D",
-          "value": "Q"
+          "suit": "H",
+          "value": "7"
+        },
+        {
+          "suit": "C",
+          "value": "10"
         },
         {
           "suit": "H",
           "value": "2"
         },
         {
+          "suit": "D",
+          "value": "4"
+        },
+        {
+          "suit": "C",
+          "value": "8"
+        },
+        {
+          "suit": "H",
+          "value": "5"
+        },
+        {
+          "suit": "D",
+          "value": "K"
+        },
+        {
+          "suit": "H",
+          "value": "8"
+        },
+        {
+          "suit": "D",
+          "value": "Q"
+        },
+        {
+          "suit": "C",
+          "value": "Q"
+        },
+        {
+          "suit": "D",
+          "value": "A"
+        },
+        {
+          "suit": "H",
+          "value": "K"
+        },
+        {
+          "suit": "S",
+          "value": "2"
+        },
+        {
+          "suit": "H",
+          "value": "A"
+        },
+        {
+          "suit": "C",
+          "value": "7"
+        },
+        {
           "suit": "S",
           "value": "6"
         },
         {
+          "suit": "C",
+          "value": "5"
+        },
+        {
           "suit": "S",
-          "value": "J"
+          "value": "A"
+        },
+        {
+          "suit": "D",
+          "value": "2"
+        },
+        {
+          "suit": "H",
+          "value": "6"
+        },
+        {
+          "suit": "D",
+          "value": "8"
+        },
+        {
+          "suit": "D",
+          "value": "3"
+        },
+        {
+          "suit": "S",
+          "value": "K"
+        },
+        {
+          "suit": "D",
+          "value": "9"
+        },
+        {
+          "suit": "C",
+          "value": "4"
+        },
+        {
+          "suit": "H",
+          "value": "3"
+        },
+        {
+          "suit": "D",
+          "value": "7"
         }
       ],
       "dealer": {
         "hand": [
           {
-            "suit": "H",
-            "value": "3"
+            "suit": "S",
+            "value": "Q"
+          },
+          {
+            "suit": "D",
+            "value": "5"
           },
           {
             "suit": "S",
-            "value": "9"
+            "value": "8"
+          }
+        ],
+        "busted": true,
+        "maxHealth": 50,
+        "health": 31,
+        "attackDamage": 9
+      },
+      "roundBanner": {
+        "text": "You Win!",
+        "type": "win",
+        "until": 1780964372915
+      },
+      "autoNextTimeout": null,
+      "blackjackTimeout": null,
+      "turnOrder": [],
+      "currentTurnIndex": 0,
+      "lastRoundSummary": {
+        "chapter": 1,
+        "roundInChapter": 2,
+        "roundsLost": 1,
+        "roundWon": true,
+        "roundDraw": false,
+        "dealerScore": 23,
+        "dealerHealthAfter": 31,
+        "results": [
+          {
+            "name": "admin",
+            "result": "win",
+            "score": 17,
+            "handCount": 1,
+            "hp": 31,
+            "attackDamage": 19,
+            "mana": 6
+          }
+        ],
+        "resolvedAt": 1780964370915,
+        "playerLost": false
+      },
+      "runResult": null
+    },
+    "playerRun": {
+      "hand": [
+        {
+          "suit": "C",
+          "value": "3"
+        },
+        {
+          "suit": "D",
+          "value": "10"
+        },
+        {
+          "suit": "S",
+          "value": "4"
+        }
+      ],
+      "standing": true,
+      "busted": false,
+      "handMultiplier": 1,
+      "handActionCount": 1,
+      "resolvedHands": [
+        {
+          "cards": [
+            {
+              "suit": "C",
+              "value": "3"
+            },
+            {
+              "suit": "D",
+              "value": "10"
+            },
+            {
+              "suit": "S",
+              "value": "4"
+            }
+          ],
+          "busted": false,
+          "multiplier": 1
+        }
+      ],
+      "pendingSplitHands": [],
+      "splitActive": false,
+      "tempShield": 0,
+      "usedManaSurge": false,
+      "usedAbilityThisHand": false,
+      "emberStrikeActive": false,
+      "health": 31,
+      "maxHealth": 40,
+      "attackDamage": 19,
+      "mana": 6,
+      "maxMana": 6,
+      "xp": 20,
+      "level": 1,
+      "xpToNext": 100,
+      "pendingStatChoices": 0,
+      "pendingBlessingChoices": 0,
+      "alive": true,
+      "levelChoiceTimeout": null
+    }
+  },
+  "NotColeJohnson": {
+    "updatedAt": 1780964972686,
+    "game": {
+      "runActive": true,
+      "phase": "in-round",
+      "chapter": 1,
+      "roundInChapter": 0,
+      "totalRoundsPlayed": 3,
+      "roundsLost": 2,
+      "dealerTier": 1,
+      "deck": [
+        {
+          "suit": "S",
+          "value": "7"
+        },
+        {
+          "suit": "S",
+          "value": "9"
+        },
+        {
+          "suit": "D",
+          "value": "9"
+        },
+        {
+          "suit": "S",
+          "value": "Q"
+        },
+        {
+          "suit": "D",
+          "value": "Q"
+        },
+        {
+          "suit": "H",
+          "value": "10"
+        },
+        {
+          "suit": "S",
+          "value": "10"
+        },
+        {
+          "suit": "C",
+          "value": "4"
+        },
+        {
+          "suit": "C",
+          "value": "K"
+        },
+        {
+          "suit": "D",
+          "value": "5"
+        },
+        {
+          "suit": "C",
+          "value": "7"
+        },
+        {
+          "suit": "S",
+          "value": "J"
+        },
+        {
+          "suit": "S",
+          "value": "A"
+        },
+        {
+          "suit": "D",
+          "value": "2"
+        },
+        {
+          "suit": "C",
+          "value": "3"
+        },
+        {
+          "suit": "C",
+          "value": "8"
+        },
+        {
+          "suit": "D",
+          "value": "J"
+        },
+        {
+          "suit": "H",
+          "value": "3"
+        },
+        {
+          "suit": "D",
+          "value": "A"
+        },
+        {
+          "suit": "H",
+          "value": "Q"
+        },
+        {
+          "suit": "C",
+          "value": "Q"
+        },
+        {
+          "suit": "H",
+          "value": "6"
+        },
+        {
+          "suit": "D",
+          "value": "6"
+        },
+        {
+          "suit": "C",
+          "value": "5"
+        },
+        {
+          "suit": "D",
+          "value": "3"
+        },
+        {
+          "suit": "H",
+          "value": "4"
+        },
+        {
+          "suit": "C",
+          "value": "9"
+        },
+        {
+          "suit": "C",
+          "value": "J"
+        },
+        {
+          "suit": "H",
+          "value": "K"
+        },
+        {
+          "suit": "S",
+          "value": "5"
+        },
+        {
+          "suit": "H",
+          "value": "9"
+        },
+        {
+          "suit": "H",
+          "value": "5"
+        },
+        {
+          "suit": "D",
+          "value": "8"
+        },
+        {
+          "suit": "S",
+          "value": "2"
+        },
+        {
+          "suit": "H",
+          "value": "8"
+        },
+        {
+          "suit": "C",
+          "value": "2"
+        },
+        {
+          "suit": "S",
+          "value": "K"
+        },
+        {
+          "suit": "H",
+          "value": "A"
+        },
+        {
+          "suit": "H",
+          "value": "2"
+        },
+        {
+          "suit": "C",
+          "value": "6"
+        },
+        {
+          "suit": "S",
+          "value": "8"
+        },
+        {
+          "suit": "H",
+          "value": "7"
+        },
+        {
+          "suit": "S",
+          "value": "3"
+        },
+        {
+          "suit": "C",
+          "value": "10"
+        },
+        {
+          "suit": "S",
+          "value": "4"
+        },
+        {
+          "suit": "D",
+          "value": "10"
+        },
+        {
+          "suit": "S",
+          "value": "6"
+        },
+        {
+          "suit": "C",
+          "value": "A"
+        }
+      ],
+      "dealer": {
+        "hand": [
+          {
+            "suit": "D",
+            "value": "7"
+          },
+          {
+            "suit": "D",
+            "value": "K"
           }
         ],
         "busted": false,
-        "maxHealth": 56,
-        "health": 56,
-        "attackDamage": 9
+        "maxHealth": 23,
+        "health": 23,
+        "attackDamage": 5
       },
       "roundBanner": null,
       "autoNextTimeout": null,
       "blackjackTimeout": null,
       "turnOrder": [
-        "vlYvjJWmZ7zsBirpAAAB"
+        "X2oud1IweC3qRW4iAAAB"
       ],
       "currentTurnIndex": 0,
       "lastRoundSummary": {
         "chapter": 1,
-        "roundInChapter": 4,
+        "roundInChapter": 0,
         "roundsLost": 2,
-        "roundWon": true,
+        "roundWon": false,
         "roundDraw": false,
-        "dealerScore": 22,
-        "dealerHealthAfter": 0,
+        "dealerScore": 21,
+        "dealerHealthAfter": 23,
         "results": [
           {
-            "name": "admin",
-            "result": "win",
-            "score": 20,
-            "handCount": 1,
+            "name": "NotColeJohnson",
+            "result": "loss",
+            "score": 23,
+            "handCount": 2,
             "hp": 20,
-            "attackDamage": 7,
-            "mana": 0
+            "attackDamage": 5,
+            "mana": 6
           }
         ],
-        "resolvedAt": 1780962714116,
+        "resolvedAt": 1780964847820,
         "playerLost": false
       },
       "runResult": null
@@ -254,11 +562,11 @@
       "hand": [
         {
           "suit": "D",
-          "value": "J"
+          "value": "4"
         },
         {
           "suit": "H",
-          "value": "9"
+          "value": "J"
         }
       ],
       "standing": false,
@@ -267,312 +575,21 @@
       "handActionCount": 0,
       "resolvedHands": [],
       "pendingSplitHands": [],
+      "splitActive": false,
       "tempShield": 0,
       "usedManaSurge": false,
       "usedAbilityThisHand": false,
       "emberStrikeActive": false,
-      "health": 30,
-      "maxHealth": 40,
-      "attackDamage": 23,
-      "mana": 2,
+      "health": 20,
+      "maxHealth": 30,
+      "attackDamage": 5,
+      "mana": 6,
       "maxMana": 6,
-      "xp": 20,
-      "level": 2,
-      "xpToNext": 135,
+      "xp": 0,
+      "level": 1,
+      "xpToNext": 100,
       "pendingStatChoices": 0,
       "pendingBlessingChoices": 0,
-      "alive": true,
-      "levelChoiceTimeout": null
-    }
-  },
-  "NotColeJohnson": {
-    "updatedAt": 1780962077305,
-    "game": {
-      "runActive": true,
-      "phase": "round-over",
-      "chapter": 1,
-      "roundInChapter": 3,
-      "totalRoundsPlayed": 3,
-      "roundsLost": 0,
-      "dealerTier": 4,
-      "deck": [
-        {
-          "suit": "C",
-          "value": "7"
-        },
-        {
-          "suit": "D",
-          "value": "5"
-        },
-        {
-          "suit": "S",
-          "value": "9"
-        },
-        {
-          "suit": "S",
-          "value": "10"
-        },
-        {
-          "suit": "H",
-          "value": "8"
-        },
-        {
-          "suit": "D",
-          "value": "9"
-        },
-        {
-          "suit": "S",
-          "value": "2"
-        },
-        {
-          "suit": "H",
-          "value": "2"
-        },
-        {
-          "suit": "D",
-          "value": "4"
-        },
-        {
-          "suit": "C",
-          "value": "9"
-        },
-        {
-          "suit": "D",
-          "value": "10"
-        },
-        {
-          "suit": "D",
-          "value": "6"
-        },
-        {
-          "suit": "D",
-          "value": "Q"
-        },
-        {
-          "suit": "C",
-          "value": "8"
-        },
-        {
-          "suit": "C",
-          "value": "4"
-        },
-        {
-          "suit": "S",
-          "value": "4"
-        },
-        {
-          "suit": "H",
-          "value": "7"
-        },
-        {
-          "suit": "S",
-          "value": "6"
-        },
-        {
-          "suit": "H",
-          "value": "9"
-        },
-        {
-          "suit": "C",
-          "value": "J"
-        },
-        {
-          "suit": "C",
-          "value": "3"
-        },
-        {
-          "suit": "H",
-          "value": "3"
-        },
-        {
-          "suit": "D",
-          "value": "8"
-        },
-        {
-          "suit": "C",
-          "value": "2"
-        },
-        {
-          "suit": "H",
-          "value": "K"
-        },
-        {
-          "suit": "H",
-          "value": "4"
-        },
-        {
-          "suit": "C",
-          "value": "K"
-        },
-        {
-          "suit": "D",
-          "value": "K"
-        },
-        {
-          "suit": "S",
-          "value": "J"
-        },
-        {
-          "suit": "S",
-          "value": "7"
-        },
-        {
-          "suit": "C",
-          "value": "10"
-        },
-        {
-          "suit": "D",
-          "value": "7"
-        },
-        {
-          "suit": "S",
-          "value": "A"
-        },
-        {
-          "suit": "C",
-          "value": "5"
-        },
-        {
-          "suit": "S",
-          "value": "5"
-        },
-        {
-          "suit": "H",
-          "value": "10"
-        },
-        {
-          "suit": "S",
-          "value": "8"
-        },
-        {
-          "suit": "C",
-          "value": "A"
-        },
-        {
-          "suit": "C",
-          "value": "Q"
-        },
-        {
-          "suit": "D",
-          "value": "2"
-        },
-        {
-          "suit": "H",
-          "value": "A"
-        },
-        {
-          "suit": "H",
-          "value": "6"
-        },
-        {
-          "suit": "S",
-          "value": "3"
-        },
-        {
-          "suit": "H",
-          "value": "5"
-        },
-        {
-          "suit": "D",
-          "value": "J"
-        }
-      ],
-      "dealer": {
-        "hand": [
-          {
-            "suit": "C",
-            "value": "6"
-          },
-          {
-            "suit": "H",
-            "value": "J"
-          },
-          {
-            "suit": "S",
-            "value": "Q"
-          }
-        ],
-        "busted": true,
-        "maxHealth": 77,
-        "health": 0,
-        "attackDamage": 13
-      },
-      "roundBanner": {
-        "text": "You Win!",
-        "type": "win",
-        "until": 1780962079305
-      },
-      "autoNextTimeout": null,
-      "turnOrder": [
-        "EZRvDFyjqF743yfNAAAB"
-      ],
-      "currentTurnIndex": 0,
-      "lastRoundSummary": {
-        "chapter": 1,
-        "roundInChapter": 3,
-        "roundsLost": 0,
-        "roundWon": true,
-        "roundDraw": false,
-        "dealerScore": 26,
-        "dealerHealthAfter": 0,
-        "results": [
-          {
-            "name": "NotColeJohnson",
-            "result": "win",
-            "score": 21,
-            "handCount": 1,
-            "hp": 41,
-            "attackDamage": 35,
-            "mana": 4
-          }
-        ],
-        "resolvedAt": 1780962077305,
-        "playerLost": false
-      },
-      "runResult": null
-    },
-    "playerRun": {
-      "hand": [
-        {
-          "value": "A",
-          "suit": "D"
-        },
-        {
-          "suit": "S",
-          "value": "K"
-        }
-      ],
-      "standing": false,
-      "busted": false,
-      "handMultiplier": 1,
-      "handActionCount": 0,
-      "resolvedHands": [],
-      "pendingSplitHands": [
-        [
-          {
-            "suit": "D",
-            "value": "A"
-          },
-          {
-            "suit": "H",
-            "value": "Q"
-          }
-        ]
-      ],
-      "tempShield": 0,
-      "usedManaSurge": false,
-      "usedAbilityThisHand": false,
-      "emberStrikeActive": false,
-      "health": 41,
-      "maxHealth": 50,
-      "attackDamage": 35,
-      "mana": 4,
-      "maxMana": 8,
-      "xp": 0,
-      "level": 2,
-      "xpToNext": 135,
-      "pendingStatChoices": 1,
-      "pendingBlessingChoices": 1,
       "alive": true,
       "levelChoiceTimeout": null
     }

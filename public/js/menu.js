@@ -3,15 +3,13 @@ if (!window.bjAuth) {
 }
 
 const menuWelcomeText = document.getElementById("menuWelcomeText");
-const rememberStatusText = document.getElementById("rememberStatusText");
-const optionsPanel = document.getElementById("optionsPanel");
 const menuMessage = document.getElementById("menuMessage");
 
 const singlePlayerButton = document.getElementById("singlePlayerButton");
 const multiPlayerButton = document.getElementById("multiPlayerButton");
 const accountButton = document.getElementById("accountButton");
+const leaderboardButton = document.getElementById("leaderboardButton");
 const optionsButton = document.getElementById("optionsButton");
-const clearSavedLoginButton = document.getElementById("clearSavedLoginButton");
 const logoutButton = document.getElementById("logoutButton");
 const exitButton = document.getElementById("exitButton");
 let hasSavedSoloRun = false;
@@ -88,10 +86,6 @@ function showMessage(text, isError = false) {
     menuMessage.className = isError ? "message message-error" : "message";
 }
 
-function refreshRememberStatus() {
-    rememberStatusText.textContent = window.bjAuth.hasPersistentSession() ? "on" : "off";
-}
-
 async function refreshSinglePlayerEntry() {
     hasSavedSoloRun = false;
 
@@ -148,7 +142,6 @@ window.bjAuth.ensureSession().then(async isValid => {
     }
 
     menuWelcomeText.textContent = `Welcome, ${window.bjAuth.getDisplayName() || "Player"}.`;
-    refreshRememberStatus();
     await refreshSinglePlayerEntry();
     setupMenuKeyboardNavigation();
 });
@@ -164,23 +157,15 @@ multiPlayerButton.addEventListener("click", () => {
 });
 
 accountButton.addEventListener("click", () => {
+    window.location.href = "account.html";
+});
+
+leaderboardButton.addEventListener("click", () => {
     window.location.href = "leaderboard.html";
 });
 
 optionsButton.addEventListener("click", () => {
-    optionsPanel.hidden = !optionsPanel.hidden;
-});
-
-clearSavedLoginButton.addEventListener("click", () => {
-    if (!window.bjAuth.hasPersistentSession()) {
-        showMessage("No saved login found.");
-        refreshRememberStatus();
-        return;
-    }
-
-    localStorage.removeItem(window.bjAuth.REMEMBER_TOKEN_KEY);
-    showMessage("Saved login cleared for future launches.");
-    refreshRememberStatus();
+    window.location.href = "options.html";
 });
 
 logoutButton.addEventListener("click", logoutAndReturn);

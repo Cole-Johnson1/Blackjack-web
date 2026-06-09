@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmackJack Options</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+</head>
+<body class="page page-menu">
+    <main class="shell home-shell menu-shell">
+        <section class="card hero-card pixel-panel menu-card">
+            <p class="eyebrow">Preferences</p>
+            <h1>Options</h1>
+            <p class="subtle">Set your interface preferences.</p>
+
+            <div class="menu-options options-standalone">
+                <h2>Theme</h2>
+                <div class="actions">
+                    <button id="lightModeButton" type="button">Light Mode</button>
+                    <button id="darkModeButton" type="button">Dark Mode</button>
+                </div>
+            </div>
+
+            <div class="menu-options options-standalone">
+                <h2>Saved Login</h2>
+                <p class="subtle">Saved login is currently <strong id="rememberStatusText">off</strong>.</p>
+                <button id="clearSavedLoginButton" type="button">Clear Saved Login</button>
+            </div>
+
+            <div class="actions">
+                <a class="button-link" href="menu.html">Back to Menu</a>
+            </div>
+
+            <p id="optionsMessage" class="message" hidden></p>
+        </section>
+    </main>
+
+    <script src="js/auth-storage.js"></script>
+    <script src="js/options.js"></script>
+</body>
+</html>

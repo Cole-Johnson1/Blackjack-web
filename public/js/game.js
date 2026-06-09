@@ -322,6 +322,37 @@ function renderCards(cards) {
     }).join("");
 }
 
+function getClientHandValue(cards) {
+    let total = 0;
+    let aces = 0;
+
+    cards.forEach(card => {
+        if (!card || card.hidden) {
+            return;
+        }
+
+        if (["J", "Q", "K"].includes(card.value)) {
+            total += 10;
+            return;
+        }
+
+        if (card.value === "A") {
+            total += 11;
+            aces += 1;
+            return;
+        }
+
+        total += Number(card.value || 0);
+    });
+
+    while (total > 21 && aces > 0) {
+        total -= 10;
+        aces -= 1;
+    }
+
+    return total;
+}
+
 function renderBars(current, max) {
     const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
     return `
@@ -371,7 +402,7 @@ function renderSummary(summary) {
     `;
 }
 
-function renderPlayers(players, currentTurnId) {
+function renderPlayers(players, currentTurnId, phase) {
     playersDiv.innerHTML = "";
 
     Object.entries(players).forEach(([id, player]) => {
@@ -386,21 +417,93 @@ function renderPlayers(players, currentTurnId) {
             ? renderCards(run.hand)
             : "<span class=\"subtle\">No cards dealt</span>";
 
+        const hasSplitDisplay = !!run.splitActive;
+
+        const splitHandsMarkup = (() => {
+            if (!hasSplitDisplay) {
+                return "";
+            }
+
+            const segments = [];
+
+            (run.resolvedHands || []).forEach((resolvedHand, index) => {
+                segments.push({
+                    cards: resolvedHand.cards || [],
+                    busted: !!resolvedHand.busted,
+                    number: index + 1,
+                    isActive: false
+                });
+            });
+
+            const finalSplitHandAlreadyResolved = !!(
+                (run.resolvedHands || []).length > 0
+                && (run.pendingSplitHands || []).length === 0
+                && run.standing
+                && !(id === currentTurnId && phase === "in-round")
+            );
+
+            if (!finalSplitHandAlreadyResolved) {
+                segments.push({
+                    cards: run.hand || [],
+                    busted: !!run.busted,
+                    number: segments.length + 1,
+                    isActive: id === currentTurnId && phase === "in-round"
+                });
+            }
+
+            (run.pendingSplitHands || []).forEach(pendingHand => {
+                segments.push({
+                    cards: pendingHand || [],
+                    busted: false,
+                    number: segments.length + 1,
+                    isActive: false
+                });
+            });
+
+            const cards = segments.map(segment => {
+                const handValue = getClientHandValue(segment.cards || []);
+                const status = segment.isActive
+                    ? "ACTIVE"
+                    : (segment.busted ? "BUST" : "READY");
+
+                return `
+                    <div class="split-hand-card ${segment.isActive ? "split-hand-active" : ""}">
+                        <div class="split-hand-title-row">
+                            <span class="split-hand-title">Hand ${segment.number}</span>
+                            <span class="split-hand-state">${status}</span>
+                        </div>
+                        <p class="split-hand-value">Value ${handValue}</p>
+                        <div class="card-row">${segment.cards.length ? renderCards(segment.cards) : "<span class='subtle'>No cards</span>"}</div>
+                    </div>
+                `;
+            }).join("");
+
+            return `<div class="split-hands-grid">${cards}</div>`;
+        })();
+
         article.innerHTML = `
             <div class="player-card-header">
                 <h3>${player.name} ${player.isHost ? "<span class='host-tag'>Host</span>" : ""}</h3>
                 <span class="hp-badge ${run.health <= 8 ? "hp-critical" : ""}">HP ${run.health}/${run.maxHealth}</span>
             </div>
-            <p class="subtle small">Lv ${run.level} • XP ${run.xp}/${run.xpToNext} • AD ${run.attackDamage} • MP ${run.mana}/${run.maxMana}</p>
-            <div class="mana-potion" aria-label="Mana ${run.mana} out of ${run.maxMana}">
-                <div class="mana-potion-bottle">
-                    <div class="mana-potion-fill" style="height:${manaPct.toFixed(1)}%"></div>
+            <div class="player-hud-row">
+                <span class="hud-pill hud-pill-level">★ Lv ${run.level}</span>
+                <span class="hud-pill hud-pill-xp">◆ XP ${run.xp}/${run.xpToNext}</span>
+                <span class="hud-pill hud-pill-attack">⚔ ATK ${run.attackDamage}</span>
+            </div>
+            <div class="mana-hud" aria-label="Mana ${run.mana} out of ${run.maxMana}">
+                <span class="mana-potion-label">Mana</span>
+                <div class="mana-potion">
+                    <div class="mana-potion-bottle">
+                        <div class="mana-potion-fill" style="height:${manaPct.toFixed(1)}%"></div>
+                    </div>
+                    <span class="mana-potion-text">${run.mana}/${run.maxMana}</span>
                 </div>
-                <span class="mana-potion-text">${run.mana}/${run.maxMana}</span>
             </div>
             ${renderBars(run.health, run.maxHealth)}
-            <p class="hand-value">Hand: <strong>${run.handValue}</strong></p>
-            <div class="card-row">${handMarkup}</div>
+            ${hasSplitDisplay
+                ? splitHandsMarkup
+                : `<p class="hand-value">Hand: <strong>${run.handValue}</strong></p><div class="card-row">${handMarkup}</div>`}
             <p class="player-status-text">${!run.alive ? "Defeated" : (run.busted ? "BUST" : (run.standing ? "STAND" : (isCurrent ? "YOUR TURN" : "Waiting")))}</p>
         `;
 
@@ -651,7 +754,7 @@ window.socket.on("gameState", state => {
     dealerCombatStats.textContent = `Dealer HP ${state.dealer.health}/${state.dealer.maxHealth} • ATK ${state.dealer.attackDamage}`;
 
     renderBattleBar(state);
-    renderPlayers(state.players, state.currentTurnId);
+    renderPlayers(state.players, state.currentTurnId, state.phase);
     renderSummary(state.lastRoundSummary);
     renderAbilityControls(state);
     renderProgressChoices(state);
@@ -666,9 +769,11 @@ window.socket.on("gameState", state => {
         if (!splitButton.isConnected) {
             doubleButton.insertAdjacentElement("afterend", splitButton);
         }
+        splitButton.hidden = false;
         splitButton.disabled = false;
     }
     else if (splitButton.isConnected) {
+        splitButton.hidden = true;
         splitButton.remove();
     }
 });
@@ -734,6 +839,12 @@ backToMenuButton.addEventListener("click", () => {
 });
 
 rematchButton.addEventListener("click", () => {
+    if (singlePlayerMode) {
+        singlePlayerRunStarted = false;
+        singlePlayerRoundRequested = false;
+        gameStarted = false;
+    }
+
     window.socket.emit("resetRun");
 });
 

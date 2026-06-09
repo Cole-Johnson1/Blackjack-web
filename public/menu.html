@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmackJack Menu</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
 </head>
 <body class="page page-menu">
     <main class="shell home-shell menu-shell">
@@ -17,16 +18,11 @@
                 <button id="singlePlayerButton" type="button">Single Player</button>
                 <button id="multiPlayerButton" type="button">Multi Player</button>
                 <button id="accountButton" type="button">Account</button>
+                <button id="leaderboardButton" type="button">Leaderboard</button>
                 <button id="optionsButton" type="button">Options</button>
                 <button id="logoutButton" type="button">Logout</button>
                 <button id="exitButton" type="button">Exit</button>
             </div>
-
-            <section id="optionsPanel" class="menu-options" hidden>
-                <h2>Options</h2>
-                <p class="subtle">Saved login is currently <strong id="rememberStatusText">off</strong>.</p>
-                <button id="clearSavedLoginButton" type="button">Clear Saved Login</button>
-            </section>
 
             <p id="menuMessage" class="message" hidden></p>
         </section>

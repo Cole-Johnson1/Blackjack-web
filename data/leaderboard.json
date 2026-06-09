@@ -13,9 +13,9 @@
     "name": "NotColeJohnson",
     "balance": 1200,
     "wins": 8,
-    "losses": 14,
+    "losses": 16,
     "pushes": 0,
-    "gamesPlayed": 22,
+    "gamesPlayed": 24,
     "totalEarnings": 200,
     "lastDailyClaim": 1780873667988,
     "runsCompleted": 1,
@@ -24,13 +24,13 @@
   "admin": {
     "name": "admin",
     "balance": 1050,
-    "wins": 0,
-    "losses": 2,
+    "wins": 1,
+    "losses": 3,
     "pushes": 0,
-    "gamesPlayed": 2,
+    "gamesPlayed": 4,
     "totalEarnings": 100,
     "lastDailyClaim": 1780266981546,
-    "runsCompleted": 0,
-    "highestChapter": 1
+    "runsCompleted": 1,
+    "highestChapter": 2
   }
 }

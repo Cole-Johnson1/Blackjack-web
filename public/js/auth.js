@@ -19,7 +19,6 @@ window.bjAuth.ensureSession().then(isValid => {
 const loginForm = document.getElementById("loginForm");
 const registerForm = document.getElementById("registerForm");
 const authSubtitle = document.getElementById("authSubtitle");
-const authSwitchPrompt = document.getElementById("authSwitchPrompt");
 const authSwitchButton = document.getElementById("authSwitchButton");
 const rememberLoginCheckbox = document.getElementById("rememberLoginCheckbox");
 
@@ -31,13 +30,11 @@ function renderAuthMode() {
 
     if (registerMode) {
         authSubtitle.textContent = "Create an account to start your first run.";
-        authSwitchPrompt.textContent = "Already have an account?";
         authSwitchButton.textContent = "Back to Login";
     }
     else {
         authSubtitle.textContent = "Sign in to continue your run.";
-        authSwitchPrompt.textContent = "Need an account?";
-        authSwitchButton.textContent = "Create Account";
+        authSwitchButton.textContent = "Need an Account?";
     }
 
     document.getElementById("authMessage").hidden = true;

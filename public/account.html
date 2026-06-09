@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmackJack Account</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+</head>
+<body class="page page-home">
+    <main class="shell home-shell auth-shell">
+        <section class="card hero-card pixel-panel auth-card">
+            <p class="eyebrow">Profile</p>
+            <h1>Account Settings</h1>
+            <p class="subtle">Update your profile, display name, and PIN.</p>
+
+            <div class="account-avatar-wrap">
+                <img id="accountAvatarPreview" class="account-avatar" alt="Profile picture preview" src="assets/cards/back.svg">
+            </div>
+
+            <form id="accountForm" class="auth-form">
+                <label for="accountUsername">Username</label>
+                <input id="accountUsername" type="text" disabled>
+
+                <label for="accountDisplayName">Display Name</label>
+                <input id="accountDisplayName" type="text" maxlength="20" required>
+
+                <label for="accountProfilePicture">Profile Picture URL (or data URL)</label>
+                <input id="accountProfilePicture" type="text" maxlength="250000" placeholder="https://... or data:image/...">
+
+                <label for="accountCurrentPin">Current PIN (required to change PIN)</label>
+                <input id="accountCurrentPin" type="password" inputmode="numeric" maxlength="12" autocomplete="current-password">
+
+                <label for="accountNewPin">New PIN</label>
+                <input id="accountNewPin" type="password" inputmode="numeric" maxlength="12" autocomplete="new-password">
+
+                <label for="accountConfirmPin">Confirm New PIN</label>
+                <input id="accountConfirmPin" type="password" inputmode="numeric" maxlength="12" autocomplete="new-password">
+
+                <button type="submit">Save Changes</button>
+            </form>
+
+            <div class="actions">
+                <a class="button-link" href="menu.html">Back to Menu</a>
+            </div>
+
+            <p id="accountMessage" class="message" hidden></p>
+        </section>
+    </main>
+
+    <script src="js/auth-storage.js"></script>
+    <script src="js/account.js"></script>
+</body>
+</html>

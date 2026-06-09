@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmackJack</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 </head>
 <body class="page page-game">
+    <button id="backToMenuButton" type="button" class="back-nav-button back-nav-floating">Back</button>
+
     <main class="shell game-shell pixel-shell">
 
         <section class="card game-header pixel-panel">
@@ -57,9 +60,6 @@
 
         <section class="card controls-card pixel-panel">
             <p class="eyebrow">Action Board</p>
-            <div class="actions gameplay-nav-actions">
-                <button id="backToMenuButton" type="button" class="back-nav-button">Back</button>
-            </div>
 
             <div class="primary-actions" id="primaryActions">
                 <button id="hitButton" class="action-big">Hit</button>
