@@ -34,7 +34,6 @@ const ADMIN_USERNAMES = new Set(
     ADMIN_USERNAMES.add(BUILT_IN_ADMIN_USERNAME);
 
 const RUN_LOSS_LIMIT = 3;
-const ROUNDS_PER_CHAPTER = 5;
 const MAX_PLAYERS_PER_ROOM = 4;
 
 const BASE_PLAYER = {
@@ -43,10 +42,85 @@ const BASE_PLAYER = {
     maxMana: 6
 };
 
+const BALANCE = {
+    progression: {
+        roundsPerChapter: 5,
+        accountUnlockStep: 5,
+        runXp: {
+            baseToNext: 10,
+            perLevel: 5,
+            winGrant: 5
+        },
+        accountXp: {
+            baseToNext: 50,
+            perLevel: 30,
+            perRound: {
+                win: 10,
+                push: 5,
+                loss: 3,
+                runLengthPerRound: 0.06,
+                runLengthCap: 1.25
+            },
+            runOver: {
+                base: 18,
+                roundsBeforeScale: 3,
+                perRound: 0.08,
+                cap: 1.5
+            }
+        }
+    },
+    dealer: {
+        baseHealth: 16,
+        healthPerChapter: 5,
+        healthPerRoundInChapter: 2,
+        healthPerTier: 25,
+        healthPerExtraPlayer: 20,
+        baseAttack: 4,
+        attackPerChapter: 1,
+        attackPerTier: 4,
+        attackPerExtraPlayer: 4,
+        bossHealthMult: 1.65,
+        bossAttackMult: 1.4
+    },
+    combat: {
+        playerDamageFloor: 1,
+        combo: {
+            kingKuntaMult: 3,
+            kevinHeartsHealPerHeart: 4,
+            emberStrikeMult: 2,
+            battleTrance: {
+                maxStacks: 4,
+                perStackMult: 0.2,
+                capMult: 0.8
+            },
+            focusSigilMult: 0.5,
+            focusSigilEmberBonusMult: 0.5,
+            overchargePerManaSpent: 2,
+            overchargeManaSurgeBonus: 4,
+            executioner: {
+                scoreThreshold: 19,
+                baseBonus: 6,
+                arcaneDrawBonus: 10
+            },
+            splitTorrent: {
+                basePerWin: 8,
+                emberPerWin: 4
+            },
+            siphonStrike: {
+                bonusPerWin: 4,
+                heal: 6,
+                shieldOnCast: 6
+            }
+        }
+    }
+};
+
+const ROUNDS_PER_CHAPTER = BALANCE.progression.roundsPerChapter;
+
 const BLESSING_OPTION_COUNT = 3;
 const SHOP_OPTION_COUNT = 3;
 
-const ACCOUNT_LEVEL_UNLOCK_STEP = 5;
+const ACCOUNT_LEVEL_UNLOCK_STEP = BALANCE.progression.accountUnlockStep;
 
 const PROFILE_PICTURES = [
     { id: "rookie_1", name: "Rookie Red", path: "assets/avatars/rookie-1.svg", unlockLevel: 1 },
@@ -137,6 +211,20 @@ const ABILITIES = {
         manaCost: 0,
         description: "Gain 2 Mana instantly."
     },
+    countingCards: {
+        id: "countingCards",
+        name: "Counting Cards",
+        type: "active",
+        manaCost: 2,
+        description: "Reveal the dealer's hidden card for this round."
+    },
+    evilBong: {
+        id: "evilBong",
+        name: "Evil Bong",
+        type: "active",
+        manaCost: 3,
+        description: "Transmute the dealer's hidden card into a 4."
+    },
     siphonStrike: {
         id: "siphonStrike",
         name: "Siphon Strike",
@@ -178,6 +266,20 @@ const ABILITIES = {
         type: "passive",
         manaCost: 0,
         description: "Passive: split-hand wins unleash extra combo strikes."
+    },
+    kingKunta: {
+        id: "kingKunta",
+        name: "King Kunta",
+        type: "passive",
+        manaCost: 0,
+        description: "Passive: any winning hand that holds a King deals 3x damage."
+    },
+    kevinHearts: {
+        id: "kevinHearts",
+        name: "Kevin Hearts",
+        type: "passive",
+        manaCost: 0,
+        description: "Passive: each Heart card in your settled hands restores 4 HP."
     }
 };
 
@@ -210,6 +312,9 @@ const persistenceState = {
     dirtySessions: false,
     dirtyOptions: false
 };
+
+let shutdownInProgress = false;
+let forcedShutdownTimer = null;
 
 if (DB_REQUIRED && !DB_ENABLED) {
     throw new Error("DATABASE_URL is required in production. Set DATABASE_URL (or set REQUIRE_DATABASE=false to allow local JSON fallback).");
@@ -337,9 +442,20 @@ function markDirty(kind) {
 }
 
 async function flushAccountsToDb(client) {
-    await client.query("DELETE FROM accounts");
+    const accountList = Object.values(accounts);
+    const usernames = accountList.map(account => String(account.username || "")).filter(Boolean);
 
-    for (const account of Object.values(accounts)) {
+    if (usernames.length > 0) {
+        await client.query(
+            "DELETE FROM accounts WHERE NOT (username = ANY($1::text[]))",
+            [usernames]
+        );
+    }
+    else {
+        await client.query("DELETE FROM accounts");
+    }
+
+    for (const account of accountList) {
         ensureAccountDefaults(account);
         await client.query(
             `
@@ -362,6 +478,21 @@ async function flushAccountsToDb(client) {
             ) VALUES (
                 $1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11::jsonb, $12, $13, $14, NOW()
             )
+            ON CONFLICT (username) DO UPDATE SET
+                display_name = EXCLUDED.display_name,
+                pin_hash = EXCLUDED.pin_hash,
+                profile_picture = EXCLUDED.profile_picture,
+                selected_profile_picture_id = EXCLUDED.selected_profile_picture_id,
+                unlocked_profile_pictures = EXCLUDED.unlocked_profile_pictures,
+                account_level = EXCLUDED.account_level,
+                account_xp = EXCLUDED.account_xp,
+                account_xp_to_next = EXCLUDED.account_xp_to_next,
+                account_total_xp = EXCLUDED.account_total_xp,
+                remember_tokens = EXCLUDED.remember_tokens,
+                is_admin = EXCLUDED.is_admin,
+                is_disabled = EXCLUDED.is_disabled,
+                created_at = EXCLUDED.created_at,
+                updated_at = NOW()
             `,
             [
                 account.username,
@@ -384,9 +515,20 @@ async function flushAccountsToDb(client) {
 }
 
 async function flushProfilesToDb(client) {
-    await client.query("DELETE FROM profiles");
+    const profileList = Object.values(profiles);
+    const displayNames = profileList.map(profile => String(profile.name || "")).filter(Boolean);
 
-    for (const profile of Object.values(profiles)) {
+    if (displayNames.length > 0) {
+        await client.query(
+            "DELETE FROM profiles WHERE NOT (display_name = ANY($1::text[]))",
+            [displayNames]
+        );
+    }
+    else {
+        await client.query("DELETE FROM profiles");
+    }
+
+    for (const profile of profileList) {
         await client.query(
             `
             INSERT INTO profiles (
@@ -401,6 +543,16 @@ async function flushProfilesToDb(client) {
                 highest_chapter,
                 updated_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+            ON CONFLICT (display_name) DO UPDATE SET
+                balance = EXCLUDED.balance,
+                wins = EXCLUDED.wins,
+                losses = EXCLUDED.losses,
+                pushes = EXCLUDED.pushes,
+                games_played = EXCLUDED.games_played,
+                total_earnings = EXCLUDED.total_earnings,
+                runs_completed = EXCLUDED.runs_completed,
+                highest_chapter = EXCLUDED.highest_chapter,
+                updated_at = NOW()
             `,
             [
                 profile.name,
@@ -418,9 +570,20 @@ async function flushProfilesToDb(client) {
 }
 
 async function flushSoloRunsToDb(client) {
-    await client.query("DELETE FROM solo_runs");
+    const runsEntries = Object.entries(soloRuns);
+    const displayNames = runsEntries.map(([displayName]) => String(displayName || "")).filter(Boolean);
 
-    for (const [displayName, run] of Object.entries(soloRuns)) {
+    if (displayNames.length > 0) {
+        await client.query(
+            "DELETE FROM solo_runs WHERE NOT (display_name = ANY($1::text[]))",
+            [displayNames]
+        );
+    }
+    else {
+        await client.query("DELETE FROM solo_runs");
+    }
+
+    for (const [displayName, run] of runsEntries) {
         await client.query(
             `
             INSERT INTO solo_runs (
@@ -430,6 +593,11 @@ async function flushSoloRunsToDb(client) {
                 player_run_state,
                 updated_ts
             ) VALUES ($1, $2, $3::jsonb, $4::jsonb, NOW())
+            ON CONFLICT (display_name) DO UPDATE SET
+                updated_at = EXCLUDED.updated_at,
+                game_state = EXCLUDED.game_state,
+                player_run_state = EXCLUDED.player_run_state,
+                updated_ts = NOW()
             `,
             [
                 displayName,
@@ -442,9 +610,20 @@ async function flushSoloRunsToDb(client) {
 }
 
 async function flushSessionsToDb(client) {
-    await client.query("DELETE FROM session_tokens");
+    const sessionEntries = Array.from(sessions.entries());
+    const tokens = sessionEntries.map(([token]) => String(token || "")).filter(Boolean);
 
-    for (const [token, session] of sessions.entries()) {
+    if (tokens.length > 0) {
+        await client.query(
+            "DELETE FROM session_tokens WHERE NOT (token = ANY($1::text[]))",
+            [tokens]
+        );
+    }
+    else {
+        await client.query("DELETE FROM session_tokens");
+    }
+
+    for (const [token, session] of sessionEntries) {
         await client.query(
             `
             INSERT INTO session_tokens (
@@ -455,6 +634,12 @@ async function flushSessionsToDb(client) {
                 expires_at,
                 updated_at
             ) VALUES ($1, $2, $3, $4, $5, NOW())
+            ON CONFLICT (token) DO UPDATE SET
+                username = EXCLUDED.username,
+                display_name = EXCLUDED.display_name,
+                created_at = EXCLUDED.created_at,
+                expires_at = EXCLUDED.expires_at,
+                updated_at = NOW()
             `,
             [
                 token,
@@ -468,9 +653,20 @@ async function flushSessionsToDb(client) {
 }
 
 async function flushOptionsToDb(client) {
-    await client.query("DELETE FROM user_options");
+    const accountList = Object.values(accounts);
+    const usernames = accountList.map(account => String(account.username || "")).filter(Boolean);
 
-    for (const account of Object.values(accounts)) {
+    if (usernames.length > 0) {
+        await client.query(
+            "DELETE FROM user_options WHERE NOT (username = ANY($1::text[]))",
+            [usernames]
+        );
+    }
+    else {
+        await client.query("DELETE FROM user_options");
+    }
+
+    for (const account of accountList) {
         ensureAccountDefaults(account);
         const options = account.options || {};
 
@@ -485,6 +681,13 @@ async function flushOptionsToDb(client) {
                 music_volume,
                 updated_at
             ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+            ON CONFLICT (username) DO UPDATE SET
+                theme = EXCLUDED.theme,
+                remember_login = EXCLUDED.remember_login,
+                ui_scale = EXCLUDED.ui_scale,
+                sfx_volume = EXCLUDED.sfx_volume,
+                music_volume = EXCLUDED.music_volume,
+                updated_at = NOW()
             `,
             [
                 account.username,
@@ -616,7 +819,8 @@ function resolveProfilePicturePath(profilePictureId) {
 }
 
 function calculateAccountXpToNext(level) {
-    return 50 + (Math.max(1, level) - 1) * 30;
+    return BALANCE.progression.accountXp.baseToNext
+        + (Math.max(1, level) - 1) * BALANCE.progression.accountXp.perLevel;
 }
 
 function normalizeUnlockedPictures(unlockedIds) {
@@ -1377,7 +1581,8 @@ function createRunState() {
         currentTurnIndex: 0,
         lastRoundSummary: null,
         runResult: null,
-        shopSeed: 0
+        shopSeed: 0,
+        dealerHoleRevealed: false
     };
 }
 
@@ -1473,14 +1678,10 @@ function pickRandom(array, count) {
 function buildBlessingOptionsForRun(run) {
     const allAbilities = Object.values(ABILITIES);
     const lockedAbilities = allAbilities.filter(ability => !runHasAbility(run, ability.id));
-    const pool = lockedAbilities.length > 0 ? lockedAbilities : allAbilities;
-
-    return pickRandom(pool, BLESSING_OPTION_COUNT).map(ability => ({
+    return pickRandom(lockedAbilities, BLESSING_OPTION_COUNT).map(ability => ({
         id: ability.id,
         name: ability.name,
-        description: lockedAbilities.length > 0
-            ? `Unlock ${ability.type}: ${ability.description}`
-            : `Mastery for ${ability.name}: +2 Attack and +2 Max Mana.`
+        description: `Unlock ${ability.type}: ${ability.description}`
     }));
 }
 
@@ -1492,6 +1693,11 @@ function ensureBlessingOptions(run) {
 
     if (!Array.isArray(run.pendingBlessingOptions) || run.pendingBlessingOptions.length === 0) {
         run.pendingBlessingOptions = buildBlessingOptionsForRun(run);
+
+        // If there are no new abilities left to unlock, skip this blessing choice.
+        if (run.pendingBlessingOptions.length === 0) {
+            run.pendingBlessingChoices = 0;
+        }
     }
 }
 
@@ -1508,7 +1714,7 @@ function applyBlessingChoice(run, abilityId) {
 }
 
 function isBossTier(tier) {
-    return Math.max(1, Number(tier) || 1) % ROUNDS_PER_CHAPTER === 0;
+    return Math.max(1, Number(tier) || 1) % BALANCE.progression.roundsPerChapter === 0;
 }
 
 function getDealerArchetypeForTier(tier) {
@@ -1638,6 +1844,7 @@ function sanitizeSavedGame(rawGame) {
             ...dealerCandidate,
             hand: Array.isArray(dealerCandidate.hand) ? dealerCandidate.hand : []
         },
+        dealerHoleRevealed: !!candidate.dealerHoleRevealed,
         shopSeed: Number.isFinite(candidate.shopSeed) ? candidate.shopSeed : 0
     };
 }
@@ -1818,7 +2025,7 @@ function getPublicGameState(room, revealDealer = false) {
         ? room.game.roundBanner
         : null;
 
-    const dealerHand = revealDealer || room.game.phase !== "in-round"
+    const dealerHand = revealDealer || room.game.phase !== "in-round" || room.game.dealerHoleRevealed
         ? room.game.dealer.hand
         : [room.game.dealer.hand[0], { hidden: true }];
 
@@ -1839,7 +2046,7 @@ function getPublicGameState(room, revealDealer = false) {
         currentTurnId: room.game.phase === "in-round" ? getCurrentPlayerId(room) : null,
         dealer: {
             hand: dealerHand,
-            handValue: revealDealer || room.game.phase !== "in-round"
+            handValue: revealDealer || room.game.phase !== "in-round" || room.game.dealerHoleRevealed
                 ? getHandValue(room.game.dealer.hand)
                 : (room.game.dealer.hand[0] ? getCardValue(room.game.dealer.hand[0]) : 0),
             busted: room.game.dealer.busted,
@@ -2043,7 +2250,8 @@ function anyPendingChoices(room) {
 }
 
 function calculateXpToNext(level) {
-    return 10 + (level - 1) * 5;
+    return BALANCE.progression.runXp.baseToNext
+        + (level - 1) * BALANCE.progression.runXp.perLevel;
 }
 
 function grantXp(player, amount) {
@@ -2203,7 +2411,7 @@ function resolvePlayerRoundOutcome(player, dealerHand, dealerAttackDamage) {
         dealerDamage: combo.totalDamage,
         heal: combo.heal,
         playerDamage: lossHands.length > 0 && lossHands.length === handOutcomes.length
-            ? Math.max(1, dealerAttackDamage - player.run.tempShield)
+            ? Math.max(BALANCE.combat.playerDamageFloor, dealerAttackDamage - player.run.tempShield)
             : 0,
         dealerScore
     };
@@ -2234,11 +2442,18 @@ function getDealerStatsForRound(room) {
     // Extra players make the dealer significantly stronger: each additional
     // player beyond the first adds 20 HP and 4 ATK so the fight stays challenging.
     const extraPlayers = Math.max(0, aliveCount - 1);
-    const baseMaxHealth = 16 + (chapter * 5) + (roundScale * 2) + extraPlayers * 20 + (tier - 1) * 25;
-    const baseAttackDamage = 4 + chapter + Math.floor(extraPlayers * 4) + (tier - 1) * 4;
+    const baseMaxHealth = BALANCE.dealer.baseHealth
+        + (chapter * BALANCE.dealer.healthPerChapter)
+        + (roundScale * BALANCE.dealer.healthPerRoundInChapter)
+        + (extraPlayers * BALANCE.dealer.healthPerExtraPlayer)
+        + ((tier - 1) * BALANCE.dealer.healthPerTier);
+    const baseAttackDamage = BALANCE.dealer.baseAttack
+        + (chapter * BALANCE.dealer.attackPerChapter)
+        + Math.floor(extraPlayers * BALANCE.dealer.attackPerExtraPlayer)
+        + ((tier - 1) * BALANCE.dealer.attackPerTier);
 
-    const bossHealthMult = isBoss ? 1.65 : 1;
-    const bossAttackMult = isBoss ? 1.4 : 1;
+    const bossHealthMult = isBoss ? BALANCE.dealer.bossHealthMult : 1;
+    const bossAttackMult = isBoss ? BALANCE.dealer.bossAttackMult : 1;
 
     return {
         maxHealth: Math.max(1, Math.round(baseMaxHealth * archetype.healthMult * bossHealthMult)),
@@ -2326,8 +2541,24 @@ function applyAbility(player, room, abilityId) {
         player.run.usedManaSurge = true;
     }
 
+    if (ability.id === "countingCards") {
+        room.game.dealerHoleRevealed = true;
+    }
+
+    if (ability.id === "evilBong") {
+        const dealerHand = Array.isArray(room.game.dealer.hand) ? room.game.dealer.hand : [];
+        if (!dealerHand[1]) {
+            player.run.mana += ability.manaCost;
+            player.run.usedAbilityThisHand = false;
+            player.run.manaSpentThisHand -= ability.manaCost;
+            return { ok: false, error: "Dealer has no hidden card to transmute." };
+        }
+
+        dealerHand[1] = { value: "4", suit: dealerHand[1].suit || "S" };
+    }
+
     if (ability.id === "siphonStrike") {
-        player.run.tempShield += 6;
+        player.run.tempShield += BALANCE.combat.combo.siphonStrike.shieldOnCast;
         player.run.siphonStrikeActive = true;
     }
 
@@ -2336,7 +2567,10 @@ function applyAbility(player, room, abilityId) {
     }
 
     if (runHasAbility(player.run, "battleTrance")) {
-        player.run.tranceStacks = Math.min(4, (player.run.tranceStacks || 0) + 1);
+        player.run.tranceStacks = Math.min(
+            BALANCE.combat.combo.battleTrance.maxStacks,
+            (player.run.tranceStacks || 0) + 1
+        );
     }
 
     player.run.handActionCount += 1;
@@ -2347,49 +2581,84 @@ function applyAbility(player, room, abilityId) {
 function calculateComboDamage(player, winHands) {
     const run = player.run;
     const settledHands = getSettledHands(player);
-    let multiplier = run.emberStrikeActive ? 2 : 1;
+    let multiplier = run.emberStrikeActive ? BALANCE.combat.combo.emberStrikeMult : 1;
     let flatBonus = 0;
     let heal = 0;
 
     if (runHasAbility(run, "battleTrance")) {
-        multiplier += Math.min(0.8, (run.tranceStacks || 0) * 0.2);
+        multiplier += Math.min(
+            BALANCE.combat.combo.battleTrance.capMult,
+            (run.tranceStacks || 0) * BALANCE.combat.combo.battleTrance.perStackMult
+        );
     }
 
     if (run.focusSigilActive) {
-        multiplier += 0.5;
+        multiplier += BALANCE.combat.combo.focusSigilMult;
 
         if (run.emberStrikeActive) {
-            multiplier += 0.5;
+            multiplier += BALANCE.combat.combo.focusSigilEmberBonusMult;
         }
     }
 
     if (runHasAbility(run, "overcharge")) {
-        flatBonus += Math.max(0, run.manaSpentThisHand || 0) * 2;
+        flatBonus += Math.max(0, run.manaSpentThisHand || 0) * BALANCE.combat.combo.overchargePerManaSpent;
 
         if (run.usedManaSurge) {
-            flatBonus += 4;
+            flatBonus += BALANCE.combat.combo.overchargeManaSurgeBonus;
         }
     }
 
     if (runHasAbility(run, "executionerInstinct")) {
         winHands.forEach(hand => {
-            if ((hand.score || 0) >= 19) {
-                flatBonus += run.usedArcaneDrawThisHand ? 10 : 6;
+            if ((hand.score || 0) >= BALANCE.combat.combo.executioner.scoreThreshold) {
+                flatBonus += run.usedArcaneDrawThisHand
+                    ? BALANCE.combat.combo.executioner.arcaneDrawBonus
+                    : BALANCE.combat.combo.executioner.baseBonus;
             }
         });
     }
 
     if (runHasAbility(run, "splitTorrent") && settledHands.length > 1 && winHands.length > 0) {
-        flatBonus += 8 * winHands.length;
+        flatBonus += BALANCE.combat.combo.splitTorrent.basePerWin * winHands.length;
 
         if (run.emberStrikeActive) {
-            flatBonus += 4 * winHands.length;
+            flatBonus += BALANCE.combat.combo.splitTorrent.emberPerWin * winHands.length;
         }
     }
 
     if (run.siphonStrikeActive) {
-        flatBonus += 4 * winHands.length;
-        heal += 6;
+        flatBonus += BALANCE.combat.combo.siphonStrike.bonusPerWin * winHands.length;
+        heal += BALANCE.combat.combo.siphonStrike.heal;
+    }
+
+    if (runHasAbility(run, "kingKunta")) {
+        const kingDamageBonus = winHands.reduce((sum, hand) => {
+            const source = settledHands.find(state => getHandValue(state.cards) === hand.score && !state.busted);
+            if (!source || !Array.isArray(source.cards)) {
+                return sum;
+            }
+
+            const hasKing = source.cards.some(card => card && card.value === "K");
+            if (!hasKing) {
+                return sum;
+            }
+
+            const baseHandDamage = run.attackDamage * (hand.multiplier || 1);
+            return sum + (baseHandDamage * (BALANCE.combat.combo.kingKuntaMult - 1));
+        }, 0);
+
+        flatBonus += Math.max(0, Math.round(kingDamageBonus));
+    }
+
+    if (runHasAbility(run, "kevinHearts")) {
+        const totalHearts = settledHands.reduce((sum, handState) => {
+            if (!Array.isArray(handState.cards)) {
+                return sum;
+            }
+            return sum + handState.cards.filter(card => card && card.suit === "H").length;
+        }, 0);
+
+        heal += totalHearts * BALANCE.combat.combo.kevinHeartsHealPerHeart;
     }
 
     const baseDamage = winHands.reduce((sum, hand) => sum + (run.attackDamage * hand.multiplier), 0);
@@ -2512,6 +2781,7 @@ function startRoundInternal(room, socket = null) {
     clearAutoNextTimeout(room);
     clearBlackjackTimeout(room);
     room.game.roundBanner = null;
+    room.game.dealerHoleRevealed = false;
     room.game.totalRoundsPlayed += 1;
     room.game.phase = "in-round";
     room.game.turnOrder = [];
@@ -2630,8 +2900,12 @@ function updateRunOver(room, reason) {
         const account = getAccountForPlayer(player);
         if (account) {
             const rounds = Math.max(1, Number(room.game.totalRoundsPlayed) || 1);
-            const multiplier = 1 + Math.min(1.5, Math.max(0, rounds - 3) * 0.08);
-            grantAccountXp(account, Math.round(18 * multiplier));
+            const multiplier = 1 + Math.min(
+                BALANCE.progression.accountXp.runOver.cap,
+                Math.max(0, rounds - BALANCE.progression.accountXp.runOver.roundsBeforeScale)
+                    * BALANCE.progression.accountXp.runOver.perRound
+            );
+            grantAccountXp(account, Math.round(BALANCE.progression.accountXp.runOver.base * multiplier));
         }
 
         clearSoloRunForPlayer(player.name);
@@ -2733,7 +3007,7 @@ function settleRound(room) {
             if (roundOutcome.heal > 0) {
                 player.run.health = Math.min(player.run.maxHealth, player.run.health + roundOutcome.heal);
             }
-            grantXp(player, 5);
+            grantXp(player, BALANCE.progression.runXp.winGrant);
         }
         else if (lossHands.length === handOutcomes.length) {
             result = "loss";
@@ -2759,9 +3033,15 @@ function settleRound(room) {
         const account = getAccountForPlayer(player);
         if (account) {
             const baseAccountXp = result === "win" || result === "blackjack"
-                ? 10
-                : (result === "push" ? 5 : 3);
-            const runLengthMultiplier = 1 + Math.min(1.25, Math.max(0, room.game.totalRoundsPlayed - 1) * 0.06);
+                ? BALANCE.progression.accountXp.perRound.win
+                : (result === "push"
+                    ? BALANCE.progression.accountXp.perRound.push
+                    : BALANCE.progression.accountXp.perRound.loss);
+            const runLengthMultiplier = 1 + Math.min(
+                BALANCE.progression.accountXp.perRound.runLengthCap,
+                Math.max(0, room.game.totalRoundsPlayed - 1)
+                    * BALANCE.progression.accountXp.perRound.runLengthPerRound
+            );
             grantAccountXp(account, Math.round(baseAccountXp * runLengthMultiplier));
             accountProgressUpdated = true;
         }
@@ -2771,6 +3051,12 @@ function settleRound(room) {
         profile.losses += lossHands.length;
         profile.pushes += handPushes;
         profile.gamesPlayed += handOutcomes.length;
+        // Passive sustain: regain +1 HP and +1 MP per settled hand.
+        const handRegen = Math.max(0, Number(handOutcomes.length) || 0);
+        if (handRegen > 0) {
+            player.run.health = Math.min(player.run.maxHealth, player.run.health + handRegen);
+            player.run.mana = Math.min(player.run.maxMana, player.run.mana + handRegen);
+        }
         player.run.handsPlayed = Math.max(0, Number(player.run.handsPlayed || 0)) + handOutcomes.length;
         profile.highestChapter = Math.max(Number(profile.highestChapter || 0), player.run.handsPlayed);
         profileProgressUpdated = true;
@@ -4267,7 +4553,126 @@ async function startServer(port = PORT) {
     });
 }
 
+function withTimeout(promise, ms, label) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            reject(new Error(`${label} timed out after ${ms}ms`));
+        }, ms);
+
+        promise
+            .then(value => {
+                clearTimeout(timer);
+                resolve(value);
+            })
+            .catch(error => {
+                clearTimeout(timer);
+                reject(error);
+            });
+    });
+}
+
+async function waitForFlushIdle(maxWaitMs = 5000) {
+    const start = Date.now();
+
+    while (persistenceState.flushInProgress) {
+        if (Date.now() - start >= maxWaitMs) {
+            throw new Error(`Flush did not become idle within ${maxWaitMs}ms`);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+}
+
+async function flushPersistenceBeforeShutdown() {
+    if (!DB_ENABLED || !persistenceState.initialized) {
+        return;
+    }
+
+    if (persistenceState.flushTimer) {
+        clearTimeout(persistenceState.flushTimer);
+        persistenceState.flushTimer = null;
+    }
+
+    await waitForFlushIdle(5000);
+    await withTimeout(flushPersistence(), 8000, "Final persistence flush");
+    await waitForFlushIdle(5000);
+}
+
+async function closeIoServer() {
+    await new Promise(resolve => {
+        io.close(() => resolve());
+    });
+}
+
+async function closeHttpServer() {
+    if (!server.listening) {
+        return;
+    }
+
+    await new Promise((resolve, reject) => {
+        server.close(error => {
+            if (error) {
+                reject(error);
+                return;
+            }
+            resolve();
+        });
+    });
+}
+
+async function closeDbPool() {
+    if (dbPool) {
+        await dbPool.end();
+        dbPool = null;
+    }
+}
+
+async function gracefulShutdown(signal) {
+    if (shutdownInProgress) {
+        return;
+    }
+
+    shutdownInProgress = true;
+    console.log(`Received ${signal}. Starting graceful shutdown...`);
+
+    forcedShutdownTimer = setTimeout(() => {
+        console.error("Forced shutdown after timeout.");
+        process.exit(1);
+    }, 15000);
+
+    try {
+        await flushPersistenceBeforeShutdown();
+        await withTimeout(closeIoServer(), 3000, "Socket.IO shutdown");
+        await withTimeout(closeHttpServer(), 5000, "HTTP server shutdown");
+        await withTimeout(closeDbPool(), 5000, "DB pool shutdown");
+        clearTimeout(forcedShutdownTimer);
+        forcedShutdownTimer = null;
+        console.log("Graceful shutdown complete.");
+        process.exit(0);
+    }
+    catch (error) {
+        clearTimeout(forcedShutdownTimer);
+        forcedShutdownTimer = null;
+        console.error("Graceful shutdown failed:", error);
+        process.exit(1);
+    }
+}
+
 if (require.main === module) {
+    process.on("SIGINT", () => {
+        gracefulShutdown("SIGINT").catch(error => {
+            console.error("SIGINT shutdown failure:", error);
+            process.exit(1);
+        });
+    });
+
+    process.on("SIGTERM", () => {
+        gracefulShutdown("SIGTERM").catch(error => {
+            console.error("SIGTERM shutdown failure:", error);
+            process.exit(1);
+        });
+    });
+
     startServer(PORT).catch(error => {
         console.error("Failed to start server:", error);
         process.exit(1);
@@ -4278,8 +4683,10 @@ module.exports = {
     app,
     server,
     startServer,
+    gracefulShutdown,
     __testOnly: {
         makePlayerRunState,
+        buildBlessingOptionsForRun,
         calculateXpToNext,
         calculateAccountXpToNext,
         grantXp,
@@ -4289,6 +4696,9 @@ module.exports = {
         resolvePlayerRoundOutcome,
         getCardValue,
         getHandValue,
-        isBlackjack
+        isBlackjack,
+        settleRound,
+        getRoomByCode: roomCode => rooms.get(String(roomCode || "").toUpperCase()) || null,
+        getPlayerById: socketId => players[String(socketId || "")] || null
     }
 };

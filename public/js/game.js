@@ -84,6 +84,7 @@ let blessingModalVisible = false;
 let blessingTimerInterval = null;
 let blessingTimerSeconds = 30;
 let blessingChoiceMade = false;
+let blessingRenderKey = "";
 let shopModalVisible = false;
 let shopTimerInterval = null;
 let shopTimerSeconds = 30;
@@ -160,7 +161,23 @@ function hideUpgradeModal() {
 // ---- Big upgrade (blessing) modal ----------------------------------------
 
 function showBlessingModal(state) {
-    if (blessingModalVisible) {
+    const self = state.players[window.socket.id];
+    const blessingChoices = self && self.run && Array.isArray(self.run.pendingBlessingOptions)
+        ? self.run.pendingBlessingOptions
+        : (state.blessings || []);
+
+    const pendingBlessingCount = self && self.run
+        ? Number(self.run.pendingBlessingChoices || 0)
+        : 0;
+    const nextRenderKey = `${pendingBlessingCount}:${blessingChoices.map(choice => choice && choice.id).filter(Boolean).join("|")}`;
+
+    if (!blessingChoices.length) {
+        hideBlessingModal();
+        return;
+    }
+
+    // Skip redundant rebuilds, but do refresh if a post-choice lock is active.
+    if (blessingModalVisible && !blessingChoiceMade && blessingRenderKey === nextRenderKey) {
         return;
     }
 
@@ -171,11 +188,6 @@ function showBlessingModal(state) {
     // Big upgrade only fires on dealer defeat (always a win), banner is always positive.
     blessingResultBanner.textContent = "Dealer Slain!";
     blessingResultBanner.className = "modal-result-banner result-won";
-
-    const self = state.players[window.socket.id];
-    const blessingChoices = self && self.run && Array.isArray(self.run.pendingBlessingOptions)
-        ? self.run.pendingBlessingOptions
-        : (state.blessings || []);
 
     // Build blessing buttons dynamically from server state.
     blessingOptions.innerHTML = "";
@@ -195,6 +207,7 @@ function showBlessingModal(state) {
         blessingOptions.appendChild(btn);
     });
 
+    blessingRenderKey = nextRenderKey;
     blessingModalVisible = true;
     blessingModalOverlay.removeAttribute("hidden");
     startBlessingTimer();
@@ -202,6 +215,7 @@ function showBlessingModal(state) {
 
 function hideBlessingModal() {
     blessingModalVisible = false;
+    blessingRenderKey = "";
     blessingModalOverlay.setAttribute("hidden", "");
     if (blessingTimerInterval) {
         clearInterval(blessingTimerInterval);
