@@ -303,7 +303,9 @@ function startPostChoiceModal() {
 function showMessage(text, isError = false) {
     gameMessage.hidden = false;
     gameMessage.textContent = text;
-    gameMessage.className = isError ? "message message-error" : "message";
+    gameMessage.className = isError
+        ? "game-message-pov message-error"
+        : "game-message-pov";
 }
 
 // ---- Per-turn countdown timer (25 seconds) --------------------------------
@@ -412,44 +414,154 @@ function renderBars(current, max) {
     `;
 }
 
+// ── POV ANIMATION HELPERS ──────────────────────────────────────
+
+const bloodScreen   = document.getElementById("bloodScreen");
+const hitFlashEl    = document.getElementById("hitFlash");
+const gameViewport  = document.getElementById("gameViewport");
+const dealerSprite  = document.getElementById("dealerSprite");
+const dealerArmL    = document.getElementById("dealerArmLeft");
+const dealerArmR    = document.getElementById("dealerArmRight");
+const playerArmL    = document.getElementById("playerArmLeft");
+const playerArmR    = document.getElementById("playerArmRight");
+
+function updateBloodScreen(hpPct) {
+    if (!bloodScreen) return;
+    bloodScreen.classList.remove("hp-low", "hp-critical");
+    if (hpPct < 25) {
+        bloodScreen.classList.add("hp-critical");
+    } else if (hpPct < 50) {
+        bloodScreen.classList.add("hp-low");
+    }
+}
+
+function triggerHitFlash() {
+    if (!hitFlashEl) return;
+    hitFlashEl.classList.add("active");
+    setTimeout(() => hitFlashEl.classList.remove("active"), 120);
+}
+
+function triggerScreenShake() {
+    if (!gameViewport) return;
+    gameViewport.classList.add("screen-shake");
+    setTimeout(() => gameViewport.classList.remove("screen-shake"), 400);
+}
+
+function animatePlayerSmack() {
+    if (!playerArmL || !playerArmR) return;
+    // Alternate arms for a punching feel
+    const useLeft = Math.random() < 0.5;
+    const arm = useLeft ? playerArmL : playerArmR;
+    arm.classList.remove("smacking");
+    // Force reflow so re-adding triggers the animation
+    void arm.offsetWidth;
+    arm.classList.add("smacking");
+    arm.addEventListener("animationend", () => arm.classList.remove("smacking"), { once: true });
+
+    // Dealer reacts to being hit
+    if (dealerSprite) {
+        setTimeout(() => {
+            dealerSprite.classList.remove("hit");
+            void dealerSprite.offsetWidth;
+            dealerSprite.classList.add("hit");
+            dealerSprite.addEventListener("animationend", () => dealerSprite.classList.remove("hit"), { once: true });
+        }, 150);
+    }
+}
+
+function animateDealerSmack() {
+    if (!dealerArmR) return;
+    // Dealer strikes with right arm
+    dealerArmR.classList.remove("smacking");
+    void dealerArmR.offsetWidth;
+    dealerArmR.classList.add("smacking");
+    dealerArmR.addEventListener("animationend", () => dealerArmR.classList.remove("smacking"), { once: true });
+
+    // Screen shake + hit flash for player getting hit
+    setTimeout(() => {
+        triggerHitFlash();
+        triggerScreenShake();
+    }, 200);
+}
+
+let lastBannerType = null;
+
 function renderBattleBar(state) {
-    const allPlayers = Object.values(state.players || {});
-    const alive = allPlayers.filter(p => p.run && p.run.alive);
+    // ── Dealer HUD pills ──
+    const dHpPct = state.dealer.maxHealth > 0
+        ? Math.max(0, Math.min(100, (state.dealer.health / state.dealer.maxHealth) * 100))
+        : 0;
+    const dCritical = dHpPct < 25;
+    const dTier = state.dealerTier || 1;
 
     battleP1.innerHTML = `
-        <span class="battle-name">Dealer</span>
-        <span class="battle-hp">HP ${state.dealer.health} / ${state.dealer.maxHealth}</span>
-        ${renderBars(state.dealer.health, state.dealer.maxHealth)}
-        <span class="subtle small">Attack ${state.dealer.attackDamage}</span>
+        <span class="hud-pill hud-pill-level">★ Tier ${dTier}</span>
+        <span class="hud-pill hud-pill-health ${dCritical ? 'critical' : ''}">❤ ${state.dealer.health}/${state.dealer.maxHealth}</span>
+        <span class="hud-pill hud-pill-attack">⚔ ATK ${state.dealer.attackDamage}</span>
     `;
 
-    battleP2.innerHTML = `
-        <span class="battle-name">Team</span>
-        <span class="battle-hp">Alive ${alive.length} / ${allPlayers.length}</span>
-        <span class="subtle small">Party Status</span>
-    `;
+    // Update dealer HP bar
+    const dealerBar = document.getElementById('dealerHpBarFill');
+    if (dealerBar) {
+        dealerBar.style.width = dHpPct.toFixed(1) + '%';
+        dealerBar.classList.toggle('critical', dCritical);
+    }
 
-    roundCounter.textContent = `Chapter ${state.chapter} • Round ${state.roundInChapter + 1}/${state.roundsPerChapter}`;
+    // ── Player stat pills (bottom HUD) ──
+    const self = state.players[window.socket.id];
+    if (self && self.run) {
+        const run = self.run;
+        const hpPct = run.maxHealth > 0
+            ? Math.max(0, Math.min(100, (run.health / run.maxHealth) * 100))
+            : 0;
+        const manaPct = run.maxMana > 0
+            ? Math.max(0, Math.min(100, (run.mana / run.maxMana) * 100))
+            : 0;
+        const hpCrit = hpPct < 25;
+        const hpLow  = hpPct < 50;
+
+        battleP2.innerHTML = `
+            <span class="hud-pill hud-pill-level">★ Lv ${run.level || 1}</span>
+            <span class="hud-pill hud-pill-xp">◆ ${run.xp}/${run.xpToNext}</span>
+            <span class="hud-pill hud-pill-health ${hpCrit ? 'critical' : ''}">❤ ${run.health}/${run.maxHealth}</span>
+            <span class="hud-pill hud-pill-attack">⚔ ATK ${run.attackDamage}</span>
+            <div class="hud-hp-bar">
+                <div class="hud-hp-track">
+                    <div class="hud-hp-fill ${hpLow ? 'low' : ''}" style="width:${hpPct.toFixed(1)}%"></div>
+                </div>
+            </div>
+            <div class="mana-hud">
+                <span class="mana-potion-label">MP</span>
+                <div class="mana-potion">
+                    <div class="mana-potion-bottle">
+                        <div class="mana-potion-fill" style="height:${manaPct.toFixed(1)}%"></div>
+                    </div>
+                    <span class="mana-potion-text">${run.mana}/${run.maxMana}</span>
+                </div>
+            </div>
+        `;
+
+        // Blood screen intensity
+        updateBloodScreen(hpPct);
+    } else {
+        battleP2.innerHTML = '';
+    }
+
+    roundCounter.textContent = `Chapter ${state.chapter} · Round ${state.roundInChapter + 1}/${state.roundsPerChapter}`;
 }
 
 function renderSummary(summary) {
     if (!summary) {
-        roundSummary.innerHTML = "<p class='subtle'>No round completed yet.</p>";
+        roundSummary.innerHTML = '';
         return;
     }
 
-    const rows = summary.results.map(result => `
-        <div class="summary-row">
-            <span><strong>${result.name}</strong> <span class="result-tag result-${result.result}">${result.result.toUpperCase()}</span></span>
-            <span>Score ${result.score} • Hands ${result.handCount || 1} • HP ${result.hp} • Mana ${result.mana}</span>
-        </div>
-    `).join("");
-
-    roundSummary.innerHTML = `
-        <p>Chapter ${summary.chapter} • Round ${summary.roundInChapter}</p>
-        <p class="subtle">Dealer score ${summary.dealerScore} • Dealer HP end ${summary.dealerHealthAfter}</p>
-        ${rows}
-    `;
+    // Compact strip for the bottom HUD bar
+    const parts = summary.results.map(r => {
+        const tag = r.result === 'win' ? '✔' : (r.result === 'loss' ? '✘' : '~');
+        return `${r.name} ${tag} HP${r.hp}`;
+    });
+    roundSummary.textContent = `Dealer ${summary.dealerScore} | ${parts.join(' • ')}`;
 }
 
 function renderPlayers(players, currentTurnId, phase) {
@@ -461,11 +573,10 @@ function renderPlayers(players, currentTurnId, phase) {
         const run = player.run;
 
         article.className = `player-card ${isCurrent ? "active-turn" : ""}`;
-        const manaPct = run.maxMana > 0 ? Math.max(0, Math.min(100, (run.mana / run.maxMana) * 100)) : 0;
 
         const handMarkup = run.hand.length
             ? renderCards(run.hand)
-            : "<span class=\"subtle\">No cards dealt</span>";
+            : "<span class=\"subtle\">No cards</span>";
 
         const hasSplitDisplay = !!run.splitActive;
 
@@ -531,30 +642,26 @@ function renderPlayers(players, currentTurnId, phase) {
             return `<div class="split-hands-grid">${cards}</div>`;
         })();
 
+        // Compact POV layout — header + status + cards (stats live in the bottom HUD bar)
+        const statusText = !run.alive
+            ? "⚰ Defeated"
+            : run.busted
+                ? "⚡ BUST"
+                : run.standing
+                    ? "✋ Stand"
+                    : isCurrent
+                        ? "▶ Your Turn"
+                        : "⏳ Waiting";
+
         article.innerHTML = `
             <div class="player-card-header">
-                <h3>${player.name} ${player.isHost ? "<span class='host-tag'>Host</span>" : ""}</h3>
-                <span class="hp-badge ${run.health <= 8 ? "hp-critical" : ""}">HP ${run.health}/${run.maxHealth}</span>
+                <h3>${player.name}${player.isHost ? " <span class='host-tag'>Host</span>" : ""}</h3>
+                <span class="hp-badge ${run.health <= 8 ? "hp-critical" : ""}">❤ ${run.health}/${run.maxHealth}</span>
             </div>
-            <div class="player-hud-row">
-                <span class="hud-pill hud-pill-level">★ Lv ${run.level}</span>
-                <span class="hud-pill hud-pill-xp">◆ XP ${run.xp}/${run.xpToNext}</span>
-                <span class="hud-pill hud-pill-attack">⚔ ATK ${run.attackDamage}</span>
-            </div>
-            <div class="mana-hud" aria-label="Mana ${run.mana} out of ${run.maxMana}">
-                <span class="mana-potion-label">Mana</span>
-                <div class="mana-potion">
-                    <div class="mana-potion-bottle">
-                        <div class="mana-potion-fill" style="height:${manaPct.toFixed(1)}%"></div>
-                    </div>
-                    <span class="mana-potion-text">${run.mana}/${run.maxMana}</span>
-                </div>
-            </div>
-            ${renderBars(run.health, run.maxHealth)}
             ${hasSplitDisplay
                 ? splitHandsMarkup
                 : `<p class="hand-value">Hand: <strong>${run.handValue}</strong></p><div class="card-row">${handMarkup}</div>`}
-            <p class="player-status-text">${!run.alive ? "Defeated" : (run.busted ? "BUST" : (run.standing ? "STAND" : (isCurrent ? "YOUR TURN" : "Waiting")))}</p>
+            <p class="player-status-text">${statusText}</p>
         `;
 
         playersDiv.appendChild(article);
@@ -707,13 +814,37 @@ function renderRunOver(state) {
 function renderRoundBanner(state) {
     if (!state.roundBanner) {
         roundBanner.hidden = true;
+        lastBannerType = null;
         return;
+    }
+
+    const newType = state.roundBanner.type; // "win" | "loss" | "push" | "blackjack"
+
+    // Trigger animations only when the banner first appears or changes
+    if (newType !== lastBannerType) {
+        lastBannerType = newType;
+
+        if (newType === "loss") {
+            // Dealer smacks the player
+            animateDealerSmack();
+        } else if (newType === "win" || newType === "blackjack") {
+            // Player smacks the dealer
+            animatePlayerSmack();
+        }
     }
 
     roundBanner.hidden = false;
     roundBanner.textContent = state.roundBanner.text;
-    const bannerType = state.roundBanner.type === "loss" ? "message-type-loss" : "message-type-win";
-    roundBanner.className = `message ${bannerType}`;
+
+    let bannerClass = "round-banner-pov ";
+    if (newType === "loss") {
+        bannerClass += "message-type-loss";
+    } else if (newType === "win" || newType === "blackjack") {
+        bannerClass += "message-type-win";
+    } else {
+        bannerClass += "message-type-push";
+    }
+    roundBanner.className = bannerClass;
 }
 
 function emitJoin() {
@@ -821,8 +952,8 @@ window.socket.on("gameState", state => {
     }
 
     dealerCards.innerHTML = renderCards(state.dealer.hand || []);
-    dealerValue.textContent = `Dealer Value: ${state.dealer.handValue || 0}`;
-    dealerCombatStats.textContent = `Dealer HP ${state.dealer.health}/${state.dealer.maxHealth} • ATK ${state.dealer.attackDamage}`;
+    dealerValue.textContent = `HAND: ${state.dealer.handValue || 0}`;
+    dealerCombatStats.textContent = `Tier ${state.dealerTier || 1}  •  ATK ${state.dealer.attackDamage}`;
 
     renderBattleBar(state);
     renderPlayers(state.players, state.currentTurnId, state.phase);

@@ -5,88 +5,165 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmackJack</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/game-pov.css">
     <script src="js/theme.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 </head>
-<body class="page page-game">
-    <button id="backToMenuButton" type="button" class="back-nav-button back-nav-floating">Back</button>
+<body class="page-game game-pov-body">
 
-    <main class="shell game-shell pixel-shell">
+    <!-- Blood vignette: intensifies as HP drops -->
+    <div id="bloodScreen" class="blood-screen" aria-hidden="true"></div>
 
-        <section class="card game-header pixel-panel">
-            <p class="eyebrow" id="modeLabel"></p>
-            <h1>SmackJack</h1>
-            <p id="tableStatus" class="subtle">Waiting for host to deal.</p>
-            <p id="roundBanner" class="message" hidden></p>
-            <p id="roomCodeRow" class="subtle">Room: <strong id="roomCodeText">-</strong></p>
-            <p id="gameMessage" class="message" hidden></p>
-        </section>
+    <!-- Hit flash: red flash when player is struck -->
+    <div id="hitFlash" class="hit-flash" aria-hidden="true"></div>
 
-        <section id="battleBar" class="card battle-bar pixel-panel">
-            <div class="battle-bar-inner">
-                <div id="battleP1" class="battle-side battle-side-left"></div>
-                <div class="vs-center">
-                    <span class="vs-text">VS DEALER</span>
-                    <p id="roundCounter" class="round-counter"></p>
+    <!-- Fixed back button -->
+    <button id="backToMenuButton" type="button" class="back-nav-button back-nav-floating">◀ Back</button>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         GAME VIEWPORT — full screen, no scroll
+    ═══════════════════════════════════════════════════════════════ -->
+    <div class="game-viewport" id="gameViewport">
+
+        <!-- ── TOP HUD BAR ──────────────────────────────────── -->
+        <header class="hud-top-bar">
+            <div class="hud-top-left">
+                <span class="hud-mode-label" id="modeLabel"></span>
+                <span id="roomCodeRow" class="hud-room-label">Room: <strong id="roomCodeText">-</strong></span>
+            </div>
+            <div class="hud-top-center">
+                <h1 class="game-title-hud">SmackJack</h1>
+                <p id="roundCounter" class="round-counter-hud"></p>
+            </div>
+            <div class="hud-top-right">
+                <p id="tableStatus" class="table-status-hud">Waiting...</p>
+                <div id="turnTimerDisplay" class="turn-timer-display" hidden></div>
+            </div>
+        </header>
+
+        <!-- ── DEALER SECTION ────────────────────────────────── -->
+        <section class="dealer-section">
+
+            <!-- Dealer stats strip (HP bar, ATK, tier) -->
+            <div class="dealer-stats-hud">
+                <span class="dealer-label-tag">⚠ DEALER</span>
+                <!-- battleP1 populated by renderBattleBar() -->
+                <div id="battleP1" class="dealer-stat-pills"></div>
+                <div id="dealerHpBarWrap" class="dealer-hp-bar-wrap">
+                    <div class="dealer-hp-bar-track">
+                        <div class="dealer-hp-bar-fill" id="dealerHpBarFill" style="width:100%"></div>
+                    </div>
                 </div>
-                <div id="battleP2" class="battle-side battle-side-right"></div>
+            </div>
+
+            <!-- Dealer character sprite + cards side by side -->
+            <div class="dealer-arena">
+
+                <!-- CSS pixel-art dealer character -->
+                <div class="dealer-character-wrap">
+                    <div class="dealer-sprite" id="dealerSprite">
+                        <div class="dealer-hat"></div>
+                        <div class="dealer-head"></div>
+                        <div class="dealer-torso"></div>
+                        <div class="dealer-arm dealer-arm-left" id="dealerArmLeft"></div>
+                        <div class="dealer-arm dealer-arm-right" id="dealerArmRight"></div>
+                    </div>
+                </div>
+
+                <!-- Dealer cards & hand info -->
+                <div class="dealer-cards-zone">
+                    <div id="dealerCards" class="card-row dealer-cards-row"></div>
+                    <p id="dealerValue" class="hand-value-hud"></p>
+                    <p id="dealerCombatStats" class="dealer-combat-stats"></p>
+                </div>
+
             </div>
         </section>
 
-        <section id="matchOverSection" class="card match-over-card pixel-panel" hidden>
+        <!-- ── TABLE EDGE / MESSAGES STRIP ──────────────────── -->
+        <div class="table-messages">
+            <p id="roundBanner" class="round-banner-pov" hidden></p>
+            <p id="gameMessage" class="game-message-pov" hidden></p>
+        </div>
+
+        <!-- ── PLAYER SECTION (felt table surface) ──────────── -->
+        <section class="player-section">
+
+            <!-- Player cards on the table -->
+            <div class="player-cards-zone">
+                <div id="players" class="players-pov-grid"></div>
+            </div>
+
+            <!-- First-person arms row with abilities and action buttons flanking -->
+            <div class="player-pov-row">
+
+                <!-- LEFT: Ability HUD -->
+                <div class="abilities-panel">
+                    <div class="ability-hud">
+                        <div class="ability-header">
+                            <h3>Abilities</h3>
+                            <span id="abilityUsedNote" class="ability-used-note subtle small" hidden>1 per hand</span>
+                        </div>
+                        <div id="abilityControls" class="ability-strip"></div>
+                    </div>
+                </div>
+
+                <!-- CENTER: Player first-person arms -->
+                <div class="player-arms-pov">
+                    <div class="player-arm player-arm-left" id="playerArmLeft"></div>
+                    <div class="player-arm-gap"></div>
+                    <div class="player-arm player-arm-right" id="playerArmRight"></div>
+                </div>
+
+                <!-- RIGHT: Action buttons -->
+                <div class="controls-panel">
+                    <div id="primaryActions" class="primary-actions">
+                        <button id="hitButton" class="action-big">Hit</button>
+                        <button id="standButton" class="action-big">Stand</button>
+                        <button id="doubleButton" class="action-big">Double</button>
+                        <button id="splitButton" class="action-big" hidden>Split</button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ── BOTTOM HUD BAR (player stats + last round) ───── -->
+        <footer class="player-hud-bar">
+            <!-- battleP2 populated by renderBattleBar() with player stat pills -->
+            <div id="battleP2" class="player-stat-pills"></div>
+            <div class="last-round-summary-strip">
+                <span class="eyebrow">Last Round</span>
+                <div id="roundSummary" class="summary-strip"></div>
+            </div>
+        </footer>
+
+    </div><!-- end .game-viewport -->
+
+    <!-- Hidden summary section (data holder — display replaced by strip above) -->
+    <div id="summarySection" style="display:none">
+        <div id="roundSummaryFull" class="summary"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MATCH OVER OVERLAY
+    ═══════════════════════════════════════════════════════════════ -->
+    <div id="matchOverSection" class="match-over-overlay" hidden>
+        <div class="match-over-card pixel-panel">
             <p class="eyebrow">Run Over</p>
             <h2 id="matchWinnerText"></h2>
-            <div class="actions">
+            <div class="actions" style="justify-content:center">
                 <button id="rematchButton" hidden>Reset Run</button>
                 <a class="button-link" href="lobby.html">Back To Lobby</a>
             </div>
-        </section>
+        </div>
+    </div>
 
-        <section class="card table-card pixel-panel">
-            <div class="table-zone" id="dealerZone">
-                <h2>Dealer</h2>
-                <p id="dealerCombatStats" class="subtle"></p>
-                <div id="dealerCards" class="card-row"></div>
-                <p id="dealerValue" class="subtle"></p>
-            </div>
-
-            <div class="table-zone">
-                <h2>Players</h2>
-                <div id="players" class="players-grid"></div>
-            </div>
-        </section>
-
-        <section class="card controls-card pixel-panel">
-            <p class="eyebrow">Action Board</p>
-
-            <div id="turnTimerDisplay" class="turn-timer-display" hidden></div>
-
-            <div class="primary-actions" id="primaryActions">
-                <button id="hitButton" class="action-big">Hit</button>
-                <button id="standButton" class="action-big">Stand</button>
-                <button id="doubleButton" class="action-big">Double</button>
-                <button id="splitButton" class="action-big" hidden>Split</button>
-            </div>
-
-            <div class="ability-hud">
-                <div class="ability-header">
-                    <h3>Abilities</h3>
-                    <span id="abilityUsedNote" class="ability-used-note subtle small" hidden>1 per hand</span>
-                </div>
-                <div id="abilityControls" class="ability-strip"></div>
-            </div>
-        </section>
-
-        <section class="card pixel-panel" id="summarySection">
-            <p class="eyebrow">Last Round</p>
-            <div id="roundSummary" class="summary"></div>
-        </section>
-
-    </main>
-
-    <!-- SMALL UPGRADE MODAL (after each hand) -->
+    <!-- ═══════════════════════════════════════════════════════════
+         SMALL UPGRADE MODAL (after each hand — level up)
+    ═══════════════════════════════════════════════════════════════ -->
     <div id="upgradeModalOverlay" class="modal-overlay" hidden>
         <div class="modal-content upgrade-modal">
             <div class="modal-header">
@@ -139,7 +216,9 @@
         </div>
     </div>
 
-    <!-- BIG UPGRADE MODAL (when dealer is defeated) -->
+    <!-- ═══════════════════════════════════════════════════════════
+         BIG UPGRADE MODAL (dealer defeated — blessing choice)
+    ═══════════════════════════════════════════════════════════════ -->
     <div id="blessingModalOverlay" class="modal-overlay blessing-modal-overlay" hidden>
         <div class="modal-content blessing-modal">
             <div class="modal-header">
