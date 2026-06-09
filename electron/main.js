@@ -38,7 +38,11 @@ function startLocalServer() {
     const serverEntry = path.join(__dirname, "..", "server.js");
     serverProcess = spawn(process.execPath, [serverEntry], {
         cwd: path.join(__dirname, ".."),
-        stdio: "inherit"
+        stdio: "inherit",
+        env: {
+            ...process.env,
+            ELECTRON_RUN_AS_NODE: "1"
+        }
     });
 
     serverProcess.on("exit", code => {
@@ -81,6 +85,9 @@ app.whenReady().then(async () => {
             createWindow();
         }
     });
+}).catch(error => {
+    console.error("Failed to start SmackJack:", error);
+    app.quit();
 });
 
 app.on("window-all-closed", () => {

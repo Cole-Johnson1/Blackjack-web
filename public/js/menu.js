@@ -6,6 +6,7 @@ const menuWelcomeText = document.getElementById("menuWelcomeText");
 const menuMessage = document.getElementById("menuMessage");
 
 const singlePlayerButton = document.getElementById("singlePlayerButton");
+const resetRunButton = document.getElementById("resetRunButton");
 const multiPlayerButton = document.getElementById("multiPlayerButton");
 const accountButton = document.getElementById("accountButton");
 const leaderboardButton = document.getElementById("leaderboardButton");
@@ -150,6 +151,40 @@ singlePlayerButton.addEventListener("click", () => {
     window.location.href = hasSavedSoloRun
         ? "game.html?single=1&continue=1"
         : "game.html?single=1";
+});
+
+resetRunButton.addEventListener("click", async () => {
+    const token = window.bjAuth.getToken();
+
+    if (!token) {
+        showMessage("Session expired. Please log in again.", true);
+        return;
+    }
+
+    resetRunButton.disabled = true;
+
+    try {
+        const response = await fetch("/api/solo-run-reset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token })
+        });
+
+        if (!response.ok) {
+            showMessage("Could not reset run right now.", true);
+            return;
+        }
+
+        hasSavedSoloRun = false;
+        singlePlayerButton.textContent = "Single Player";
+        showMessage("Run reset. Start a fresh single-player run.");
+    }
+    catch {
+        showMessage("Network error while resetting run.", true);
+    }
+    finally {
+        resetRunButton.disabled = false;
+    }
 });
 
 multiPlayerButton.addEventListener("click", () => {

@@ -1920,6 +1920,18 @@ app.post("/api/solo-run-status", (req, res) => {
     });
 });
 
+app.post("/api/solo-run-reset", (req, res) => {
+    const { token } = req.body || {};
+    const session = getSession(String(token || ""));
+
+    if (!session) {
+        return res.status(401).json({ valid: false, ok: false });
+    }
+
+    clearSoloRunForPlayer(session.displayName);
+    return res.json({ valid: true, ok: true });
+});
+
 app.post("/api/logout", (req, res) => {
     const { token } = req.body || {};
 

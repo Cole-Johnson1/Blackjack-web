@@ -838,6 +838,21 @@ backToMenuButton.addEventListener("click", () => {
     window.location.href = "lobby.html";
 });
 
+function goToMenuFromGame() {
+    if (singlePlayerMode) {
+        window.socket.emit("saveAndExitSolo", () => {
+            window.location.href = "menu.html";
+        });
+
+        setTimeout(() => {
+            window.location.href = "menu.html";
+        }, 400);
+        return;
+    }
+
+    window.location.href = "menu.html";
+}
+
 rematchButton.addEventListener("click", () => {
     if (singlePlayerMode) {
         singlePlayerRunStarted = false;
@@ -851,6 +866,12 @@ rematchButton.addEventListener("click", () => {
 // Keyboard navigation for game actions
 document.addEventListener("keydown", event => {
     if (event.target.tagName === "INPUT") return; // Don't intercept form inputs
+
+    if (event.key === "Escape") {
+        event.preventDefault();
+        goToMenuFromGame();
+        return;
+    }
 
     const primaryButtons = [
         { elem: hitButton, key: "h" },
