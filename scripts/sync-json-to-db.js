@@ -197,47 +197,6 @@ async function syncUserOptions(client, accounts) {
 
 async function syncSessionTokens(client, accounts) {
     await client.query("DELETE FROM session_tokens");
-
-    for (const [username, account] of Object.entries(accounts)) {
-        const tokens = Array.isArray(account && account.rememberTokens) ? account.rememberTokens : [];
-        const displayName = String(account && account.displayName ? account.displayName : username);
-
-        for (const token of tokens) {
-            const tokenHash = String(token && token.tokenHash ? token.tokenHash : "");
-
-            if (!tokenHash) {
-                continue;
-            }
-
-            await client.query(
-                `
-                INSERT INTO session_tokens (
-                    token,
-                    username,
-                    display_name,
-                    created_at,
-                    expires_at,
-                    updated_at
-                )
-                VALUES ($1, $2, $3, $4, $5, NOW())
-                ON CONFLICT (token) DO UPDATE
-                SET
-                    username = EXCLUDED.username,
-                    display_name = EXCLUDED.display_name,
-                    created_at = EXCLUDED.created_at,
-                    expires_at = EXCLUDED.expires_at,
-                    updated_at = NOW()
-                `,
-                [
-                    tokenHash,
-                    username,
-                    displayName,
-                    Number(token && token.createdAt ? token.createdAt : Date.now()),
-                    Number(token && token.expiresAt ? token.expiresAt : Date.now())
-                ]
-            );
-        }
-    }
 }
 
 async function main() {

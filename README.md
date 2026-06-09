@@ -98,6 +98,8 @@ SmackJack now includes a PostgreSQL schema for persistent account/game storage.
 
    npm run db:sync
 
+When `DATABASE_URL` is set, runtime persistence is DB-only. The server hydrates from PostgreSQL on startup and all account/profile/session/options/solo-run writes go to DB instead of local JSON files.
+
 ### Render Notes
 
 1. Add a Render Postgres database.

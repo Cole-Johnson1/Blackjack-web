@@ -43,7 +43,7 @@ async function get(path) {
 }
 
 test.before(async () => {
-    listener = startServer(0);
+    listener = await startServer(0);
     const address = listener.address();
     const port = typeof address === "object" && address ? address.port : 3000;
     baseUrl = `http://127.0.0.1:${port}`;

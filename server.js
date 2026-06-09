@@ -5,6 +5,7 @@ const path = require("path");
 const { Server } = require("socket.io");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const { Pool } = require("pg");
 
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, "data", "leaderboard.json");
@@ -14,6 +15,9 @@ const SOLO_RUNS_FILE = path.join(__dirname, "data", "solo-runs.json");
 const BCRYPT_ROUNDS = 12;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const REMEMBER_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const DATABASE_URL = String(process.env.DATABASE_URL || "").trim();
+const DB_ENABLED = !!DATABASE_URL;
+const DB_SSL_ENABLED = String(process.env.PGSSLMODE || "require").toLowerCase() !== "disable";
 const BUILT_IN_ADMIN_USERNAME = "admin";
 const BUILT_IN_ADMIN_DISPLAY_NAME = "Admin";
 const BUILT_IN_ADMIN_PIN = "0000";
@@ -191,8 +195,24 @@ const loginAttempts = new Map();
 const players = {};
 const rooms = new Map();
 
+let dbPool = null;
+const persistenceState = {
+    initialized: false,
+    flushTimer: null,
+    flushInProgress: false,
+    dirtyAccounts: false,
+    dirtyProfiles: false,
+    dirtySoloRuns: false,
+    dirtySessions: false,
+    dirtyOptions: false
+};
+
 function loadProfiles() {
     try {
+        if (DB_ENABLED) {
+            return {};
+        }
+
         if (!fs.existsSync(DATA_FILE)) {
             return {};
         }
@@ -213,6 +233,11 @@ function loadProfiles() {
 
 function saveProfiles() {
     try {
+        if (DB_ENABLED) {
+            markDirty("profiles");
+            return;
+        }
+
         fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
         fs.writeFileSync(DATA_FILE, JSON.stringify(profiles, null, 2), "utf8");
     }
@@ -223,6 +248,10 @@ function saveProfiles() {
 
 function loadAccounts() {
     try {
+        if (DB_ENABLED) {
+            return {};
+        }
+
         if (!fs.existsSync(ACCOUNTS_FILE)) {
             return {};
         }
@@ -243,11 +272,286 @@ function loadAccounts() {
 
 function saveAccounts() {
     try {
+        if (DB_ENABLED) {
+            markDirty("accounts");
+            markDirty("options");
+            return;
+        }
+
         fs.mkdirSync(path.dirname(ACCOUNTS_FILE), { recursive: true });
         fs.writeFileSync(ACCOUNTS_FILE, JSON.stringify(accounts, null, 2), "utf8");
     }
     catch (error) {
         console.error("Failed to save accounts data:", error);
+    }
+}
+
+function getDbPool() {
+    if (!DB_ENABLED) {
+        return null;
+    }
+
+    if (!dbPool) {
+        dbPool = new Pool({
+            connectionString: DATABASE_URL,
+            ssl: DB_SSL_ENABLED ? { rejectUnauthorized: false } : false
+        });
+    }
+
+    return dbPool;
+}
+
+function markDirty(kind) {
+    if (!DB_ENABLED) {
+        return;
+    }
+
+    if (kind === "accounts") persistenceState.dirtyAccounts = true;
+    if (kind === "profiles") persistenceState.dirtyProfiles = true;
+    if (kind === "soloRuns") persistenceState.dirtySoloRuns = true;
+    if (kind === "sessions") persistenceState.dirtySessions = true;
+    if (kind === "options") persistenceState.dirtyOptions = true;
+
+    if (persistenceState.flushTimer || !persistenceState.initialized) {
+        return;
+    }
+
+    persistenceState.flushTimer = setTimeout(() => {
+        persistenceState.flushTimer = null;
+        flushPersistence().catch(error => {
+            console.error("Persistence flush failed:", error);
+        });
+    }, 120);
+}
+
+async function flushAccountsToDb(client) {
+    await client.query("DELETE FROM accounts");
+
+    for (const account of Object.values(accounts)) {
+        ensureAccountDefaults(account);
+        await client.query(
+            `
+            INSERT INTO accounts (
+                username,
+                display_name,
+                pin_hash,
+                profile_picture,
+                selected_profile_picture_id,
+                unlocked_profile_pictures,
+                account_level,
+                account_xp,
+                account_xp_to_next,
+                account_total_xp,
+                remember_tokens,
+                is_admin,
+                is_disabled,
+                created_at,
+                updated_at
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11::jsonb, $12, $13, $14, NOW()
+            )
+            `,
+            [
+                account.username,
+                account.displayName,
+                account.pinHash,
+                account.profilePicture || "",
+                account.selectedProfilePictureId || DEFAULT_PROFILE_PICTURE_ID,
+                JSON.stringify(Array.isArray(account.unlockedProfilePictures) ? account.unlockedProfilePictures : []),
+                Number(account.accountLevel || 1),
+                Number(account.accountXp || 0),
+                Number(account.accountXpToNext || 50),
+                Number(account.accountTotalXp || 0),
+                JSON.stringify(Array.isArray(account.rememberTokens) ? account.rememberTokens : []),
+                !!account.isAdmin,
+                !!account.isDisabled,
+                Number(account.createdAt || Date.now())
+            ]
+        );
+    }
+}
+
+async function flushProfilesToDb(client) {
+    await client.query("DELETE FROM profiles");
+
+    for (const profile of Object.values(profiles)) {
+        await client.query(
+            `
+            INSERT INTO profiles (
+                display_name,
+                balance,
+                wins,
+                losses,
+                pushes,
+                games_played,
+                total_earnings,
+                runs_completed,
+                highest_chapter,
+                updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+            `,
+            [
+                profile.name,
+                Number(profile.balance || 1000),
+                Number(profile.wins || 0),
+                Number(profile.losses || 0),
+                Number(profile.pushes || 0),
+                Number(profile.gamesPlayed || 0),
+                Number(profile.totalEarnings || 0),
+                Number(profile.runsCompleted || 0),
+                Number(profile.highestChapter || 1)
+            ]
+        );
+    }
+}
+
+async function flushSoloRunsToDb(client) {
+    await client.query("DELETE FROM solo_runs");
+
+    for (const [displayName, run] of Object.entries(soloRuns)) {
+        await client.query(
+            `
+            INSERT INTO solo_runs (
+                display_name,
+                updated_at,
+                game_state,
+                player_run_state,
+                updated_ts
+            ) VALUES ($1, $2, $3::jsonb, $4::jsonb, NOW())
+            `,
+            [
+                displayName,
+                Number(run.updatedAt || Date.now()),
+                JSON.stringify(run.game || {}),
+                JSON.stringify(run.playerRun || {})
+            ]
+        );
+    }
+}
+
+async function flushSessionsToDb(client) {
+    await client.query("DELETE FROM session_tokens");
+
+    for (const [token, session] of sessions.entries()) {
+        await client.query(
+            `
+            INSERT INTO session_tokens (
+                token,
+                username,
+                display_name,
+                created_at,
+                expires_at,
+                updated_at
+            ) VALUES ($1, $2, $3, $4, $5, NOW())
+            `,
+            [
+                token,
+                session.username,
+                session.displayName,
+                Number(session.createdAt || Date.now()),
+                Number(session.expiresAt || Date.now())
+            ]
+        );
+    }
+}
+
+async function flushOptionsToDb(client) {
+    await client.query("DELETE FROM user_options");
+
+    for (const account of Object.values(accounts)) {
+        ensureAccountDefaults(account);
+        const options = account.options || {};
+
+        await client.query(
+            `
+            INSERT INTO user_options (
+                username,
+                theme,
+                remember_login,
+                ui_scale,
+                sfx_volume,
+                music_volume,
+                updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+            `,
+            [
+                account.username,
+                options.theme === "dark" ? "dark" : "light",
+                Array.isArray(account.rememberTokens) && account.rememberTokens.length > 0,
+                100,
+                100,
+                100
+            ]
+        );
+    }
+}
+
+async function flushPersistence() {
+    if (!DB_ENABLED || persistenceState.flushInProgress || !persistenceState.initialized) {
+        return;
+    }
+
+    persistenceState.flushInProgress = true;
+    const pool = getDbPool();
+
+    try {
+        while (
+            persistenceState.dirtyAccounts
+            || persistenceState.dirtyProfiles
+            || persistenceState.dirtySoloRuns
+            || persistenceState.dirtySessions
+            || persistenceState.dirtyOptions
+        ) {
+            const flushAccounts = persistenceState.dirtyAccounts;
+            const flushProfiles = persistenceState.dirtyProfiles;
+            const flushSoloRuns = persistenceState.dirtySoloRuns;
+            const flushSessions = persistenceState.dirtySessions;
+            const flushOptions = persistenceState.dirtyOptions;
+
+            persistenceState.dirtyAccounts = false;
+            persistenceState.dirtyProfiles = false;
+            persistenceState.dirtySoloRuns = false;
+            persistenceState.dirtySessions = false;
+            persistenceState.dirtyOptions = false;
+
+            const client = await pool.connect();
+
+            try {
+                await client.query("BEGIN");
+
+                if (flushAccounts) {
+                    await flushAccountsToDb(client);
+                }
+
+                if (flushProfiles) {
+                    await flushProfilesToDb(client);
+                }
+
+                if (flushSoloRuns) {
+                    await flushSoloRunsToDb(client);
+                }
+
+                if (flushSessions) {
+                    await flushSessionsToDb(client);
+                }
+
+                if (flushOptions) {
+                    await flushOptionsToDb(client);
+                }
+
+                await client.query("COMMIT");
+            }
+            catch (error) {
+                await client.query("ROLLBACK");
+                throw error;
+            }
+            finally {
+                client.release();
+            }
+        }
+    }
+    finally {
+        persistenceState.flushInProgress = false;
     }
 }
 
@@ -482,6 +786,10 @@ function syncProfilesWithAccounts() {
 
 function loadSoloRuns() {
     try {
+        if (DB_ENABLED) {
+            return {};
+        }
+
         if (!fs.existsSync(SOLO_RUNS_FILE)) {
             return {};
         }
@@ -503,12 +811,132 @@ function loadSoloRuns() {
 
 function saveSoloRuns() {
     try {
+        if (DB_ENABLED) {
+            markDirty("soloRuns");
+            return;
+        }
+
         fs.mkdirSync(path.dirname(SOLO_RUNS_FILE), { recursive: true });
         fs.writeFileSync(SOLO_RUNS_FILE, JSON.stringify(soloRuns, null, 2), "utf8");
     }
     catch (error) {
         console.error("Failed to save solo run data:", error);
     }
+}
+
+async function initializeDatabasePersistence() {
+    if (!DB_ENABLED || persistenceState.initialized) {
+        return;
+    }
+
+    const pool = getDbPool();
+    const schemaSql = fs.readFileSync(path.join(__dirname, "db", "schema.sql"), "utf8");
+    const client = await pool.connect();
+
+    try {
+        await client.query("BEGIN");
+        await client.query(schemaSql);
+
+        const accountsResult = await client.query("SELECT * FROM accounts");
+        const profilesResult = await client.query("SELECT * FROM profiles");
+        const soloRunsResult = await client.query("SELECT * FROM solo_runs");
+        const sessionsResult = await client.query("SELECT * FROM session_tokens");
+        const optionsResult = await client.query("SELECT * FROM user_options");
+
+        const loadedAccounts = {};
+        for (const row of accountsResult.rows) {
+            loadedAccounts[row.username] = {
+                username: row.username,
+                displayName: row.display_name,
+                pinHash: row.pin_hash,
+                profilePicture: row.profile_picture,
+                selectedProfilePictureId: row.selected_profile_picture_id,
+                unlockedProfilePictures: Array.isArray(row.unlocked_profile_pictures) ? row.unlocked_profile_pictures : [],
+                accountLevel: Number(row.account_level || 1),
+                accountXp: Number(row.account_xp || 0),
+                accountXpToNext: Number(row.account_xp_to_next || 50),
+                accountTotalXp: Number(row.account_total_xp || 0),
+                rememberTokens: Array.isArray(row.remember_tokens) ? row.remember_tokens : [],
+                isAdmin: !!row.is_admin,
+                isDisabled: !!row.is_disabled,
+                createdAt: Number(row.created_at || Date.now())
+            };
+        }
+
+        const loadedOptions = {};
+        for (const row of optionsResult.rows) {
+            loadedOptions[row.username] = {
+                theme: row.theme === "dark" ? "dark" : "light"
+            };
+        }
+
+        for (const account of Object.values(loadedAccounts)) {
+            account.options = loadedOptions[account.username] || { theme: "light" };
+            ensureAccountDefaults(account);
+        }
+
+        const loadedProfiles = {};
+        for (const row of profilesResult.rows) {
+            loadedProfiles[row.display_name] = {
+                name: row.display_name,
+                balance: Number(row.balance || 1000),
+                wins: Number(row.wins || 0),
+                losses: Number(row.losses || 0),
+                pushes: Number(row.pushes || 0),
+                gamesPlayed: Number(row.games_played || 0),
+                totalEarnings: Number(row.total_earnings || 0),
+                runsCompleted: Number(row.runs_completed || 0),
+                highestChapter: Number(row.highest_chapter || 1)
+            };
+        }
+
+        const loadedSoloRuns = {};
+        for (const row of soloRunsResult.rows) {
+            loadedSoloRuns[row.display_name] = {
+                updatedAt: Number(row.updated_at || Date.now()),
+                game: row.game_state || {},
+                playerRun: row.player_run_state || {}
+            };
+        }
+
+        const loadedSessions = new Map();
+        for (const row of sessionsResult.rows) {
+            loadedSessions.set(row.token, {
+                username: row.username,
+                displayName: row.display_name,
+                createdAt: Number(row.created_at || Date.now()),
+                expiresAt: Number(row.expires_at || Date.now())
+            });
+        }
+
+        accounts = loadedAccounts;
+        profiles = loadedProfiles;
+        soloRuns = loadedSoloRuns;
+
+        sessions.clear();
+        for (const [token, session] of loadedSessions.entries()) {
+            sessions.set(token, session);
+        }
+
+        ensureBuiltInAdminAccount();
+        Object.values(accounts).forEach(ensureAccountDefaults);
+        syncProfilesWithAccounts();
+
+        await client.query("COMMIT");
+    }
+    catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+    }
+    finally {
+        client.release();
+    }
+
+    persistenceState.initialized = true;
+    markDirty("accounts");
+    markDirty("profiles");
+    markDirty("options");
+    markDirty("sessions");
 }
 
 function generateToken() {
@@ -572,6 +1000,33 @@ function findAccountByRememberToken(rawToken) {
     return null;
 }
 
+function setSessionRecord(token, session) {
+    sessions.set(token, session);
+    markDirty("sessions");
+}
+
+function deleteSessionRecord(token) {
+    const removed = sessions.delete(token);
+    if (removed) {
+        markDirty("sessions");
+    }
+}
+
+function deleteSessionsForUsername(username) {
+    let removed = false;
+
+    for (const [sessionToken, session] of sessions.entries()) {
+        if (session && session.username === username) {
+            sessions.delete(sessionToken);
+            removed = true;
+        }
+    }
+
+    if (removed) {
+        markDirty("sessions");
+    }
+}
+
 function getSession(token) {
     if (!token) {
         return null;
@@ -584,7 +1039,7 @@ function getSession(token) {
     }
 
     if (session.expiresAt < Date.now()) {
-        sessions.delete(token);
+        deleteSessionRecord(token);
         return null;
     }
 
@@ -603,7 +1058,7 @@ function getAccountFromToken(token) {
         ensureAccountDefaults(account);
 
         if (account.isDisabled) {
-            sessions.delete(String(token || ""));
+            deleteSessionRecord(String(token || ""));
             return { session: null, account: null };
         }
     }
@@ -649,10 +1104,12 @@ function updateConnectedPlayerName(username, nextDisplayName) {
     });
 }
 
-ensureBuiltInAdminAccount();
-Object.values(accounts).forEach(ensureAccountDefaults);
-syncProfilesWithAccounts();
-saveAccounts();
+if (!DB_ENABLED) {
+    ensureBuiltInAdminAccount();
+    Object.values(accounts).forEach(ensureAccountDefaults);
+    syncProfilesWithAccounts();
+    saveAccounts();
+}
 
 function recordLoginAttempt(ip) {
     const now = Date.now();
@@ -2547,7 +3004,7 @@ app.post("/api/login", async (req, res) => {
         clearLoginAttempts(ip);
 
         const token = generateToken();
-        sessions.set(token, {
+        setSessionRecord(token, {
             username: key,
             displayName: account.displayName,
             createdAt: Date.now(),
@@ -2590,7 +3047,7 @@ app.post("/api/remember-login", (req, res) => {
     }
 
     const token = generateToken();
-    sessions.set(token, {
+    setSessionRecord(token, {
         username: account.username,
         displayName: account.displayName,
         createdAt: Date.now(),
@@ -2623,7 +3080,7 @@ app.post("/api/session", (req, res) => {
         ensureAccountDefaults(account);
 
         if (account.isDisabled) {
-            sessions.delete(sessionToken);
+            deleteSessionRecord(sessionToken);
             return res.status(401).json({ valid: false });
         }
     }
@@ -2889,11 +3346,7 @@ app.post("/api/admin/account/set-disabled", (req, res) => {
     target.isDisabled = !!isDisabled;
 
     if (target.isDisabled) {
-        for (const [sessionToken, session] of sessions.entries()) {
-            if (session && session.username === target.username) {
-                sessions.delete(sessionToken);
-            }
-        }
+        deleteSessionsForUsername(target.username);
     }
 
     saveAccounts();
@@ -2919,11 +3372,7 @@ app.post("/api/admin/account/delete", (req, res) => {
         return res.status(403).json({ error: "Built-in Admin account cannot be deleted." });
     }
 
-    for (const [sessionToken, session] of sessions.entries()) {
-        if (session && session.username === target.username) {
-            sessions.delete(sessionToken);
-        }
-    }
+    deleteSessionsForUsername(target.username);
 
     delete accounts[key];
 
@@ -2971,7 +3420,7 @@ app.post("/api/logout", (req, res) => {
     const { token } = req.body || {};
 
     if (token) {
-        sessions.delete(String(token));
+        deleteSessionRecord(String(token));
     }
 
     return res.json({ ok: true });
@@ -3018,7 +3467,7 @@ io.use((socket, next) => {
         ensureAccountDefaults(account);
 
         if (account.isDisabled) {
-            sessions.delete(String(token || ""));
+            deleteSessionRecord(String(token || ""));
             return next(new Error("AUTH_EXPIRED"));
         }
     }
@@ -3678,15 +4127,25 @@ io.on("connection", socket => {
     });
 });
 
-function startServer(port = PORT) {
+async function startServer(port = PORT) {
+    if (DB_ENABLED) {
+        await initializeDatabasePersistence();
+    }
+    else {
+        persistenceState.initialized = true;
+    }
+
     return server.listen(port, () => {
         const assigned = server.address() && server.address().port ? server.address().port : port;
-        console.log(`Server running on port ${assigned}`);
+        console.log(`Server running on port ${assigned}${DB_ENABLED ? " (db mode)" : ""}`);
     });
 }
 
 if (require.main === module) {
-    startServer(PORT);
+    startServer(PORT).catch(error => {
+        console.error("Failed to start server:", error);
+        process.exit(1);
+    });
 }
 
 module.exports = {
