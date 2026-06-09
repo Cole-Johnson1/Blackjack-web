@@ -106,6 +106,9 @@ When `DATABASE_URL` is set, runtime persistence is DB-only. The server hydrates 
 2. Add `DATABASE_URL` to your Web Service environment variables.
 3. Run `npm run db:init` once against production.
 4. Run `npm run db:sync` once to import current data files.
+5. Confirm runtime mode after deploy: open `/api/status` and verify `persistenceMode` is `database`.
+
+If `/api/status` reports `local-json`, your service is not using Postgres and account data will not survive redeploys.
 
 These scripts are idempotent: you can rerun them safely.
 

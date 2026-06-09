@@ -18,6 +18,10 @@ const REMEMBER_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const DATABASE_URL = String(process.env.DATABASE_URL || "").trim();
 const DB_ENABLED = !!DATABASE_URL;
 const DB_SSL_ENABLED = String(process.env.PGSSLMODE || "require").toLowerCase() !== "disable";
+const REQUIRE_DB_IN_PROD = String(process.env.REQUIRE_DATABASE || "").trim().toLowerCase();
+const DB_REQUIRED = REQUIRE_DB_IN_PROD === "1"
+    || REQUIRE_DB_IN_PROD === "true"
+    || (process.env.NODE_ENV === "production" && REQUIRE_DB_IN_PROD !== "false");
 const BUILT_IN_ADMIN_USERNAME = "admin";
 const BUILT_IN_ADMIN_DISPLAY_NAME = "Admin";
 const BUILT_IN_ADMIN_PIN = "0000";
@@ -207,6 +211,10 @@ const persistenceState = {
     dirtyOptions: false
 };
 
+if (DB_REQUIRED && !DB_ENABLED) {
+    throw new Error("DATABASE_URL is required in production. Set DATABASE_URL (or set REQUIRE_DATABASE=false to allow local JSON fallback).");
+}
+
 function loadProfiles() {
     try {
         if (DB_ENABLED) {
@@ -321,7 +329,11 @@ function markDirty(kind) {
         flushPersistence().catch(error => {
             console.error("Persistence flush failed:", error);
         });
-    }, 120);
+    }, 0);
+
+    if (persistenceState.flushTimer && typeof persistenceState.flushTimer.unref === "function") {
+        persistenceState.flushTimer.unref();
+    }
 }
 
 async function flushAccountsToDb(client) {
@@ -543,6 +555,14 @@ async function flushPersistence() {
             }
             catch (error) {
                 await client.query("ROLLBACK");
+
+                // Keep failed batches dirty so the next flush retries instead of dropping writes.
+                if (flushAccounts) persistenceState.dirtyAccounts = true;
+                if (flushProfiles) persistenceState.dirtyProfiles = true;
+                if (flushSoloRuns) persistenceState.dirtySoloRuns = true;
+                if (flushSessions) persistenceState.dirtySessions = true;
+                if (flushOptions) persistenceState.dirtyOptions = true;
+
                 throw error;
             }
             finally {
@@ -1170,6 +1190,28 @@ function getOrCreateProfile(name) {
     }
 
     return profiles[name];
+}
+
+function isDisplayNameInUse(displayName, exceptUsername = "") {
+    const target = String(displayName || "").trim();
+    const skip = String(exceptUsername || "").trim().toLowerCase();
+
+    if (!target) {
+        return false;
+    }
+
+    return Object.values(accounts).some(account => {
+        if (!account) {
+            return false;
+        }
+
+        const username = String(account.username || "").trim().toLowerCase();
+        if (skip && username === skip) {
+            return false;
+        }
+
+        return String(account.displayName || "").trim() === target;
+    });
 }
 
 function createDeck() {
@@ -2932,6 +2974,10 @@ app.post("/api/register", async (req, res) => {
         return res.status(403).json({ error: "That display name is reserved." });
     }
 
+    if (isDisplayNameInUse(trimmedDisplay)) {
+        return res.status(409).json({ error: "That display name is already taken." });
+    }
+
     if (accounts[key]) {
         return res.status(409).json({ error: "That username is already taken." });
     }
@@ -3181,7 +3227,7 @@ app.post("/api/account/update", async (req, res) => {
             return res.status(403).json({ error: "That display name is reserved." });
         }
 
-        if (nextDisplay !== account.displayName && profiles[nextDisplay]) {
+        if (nextDisplay !== account.displayName && isDisplayNameInUse(nextDisplay, account.username)) {
             return res.status(409).json({ error: "Display name is already in use." });
         }
 
@@ -3483,6 +3529,7 @@ app.get("/api/profile/:name", (req, res) => {
 app.get("/api/status", (req, res) => {
     res.json({
         ok: true,
+        persistenceMode: DB_ENABLED ? "database" : "local-json",
         playerCount: Object.keys(players).length,
         roomCount: rooms.size
     });

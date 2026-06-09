@@ -190,6 +190,26 @@ test("reserved Admin username and display name cannot be registered", async () =
     assert.equal(reservedDisplay.response.status, 403);
 });
 
+test("duplicate display names are rejected", async () => {
+    const firstUser = uniqueUser("dup");
+    const secondUser = uniqueUser("dup");
+    const displayName = `Same${Date.now().toString(36)}`.slice(0, 20);
+
+    const first = await post("/api/register", {
+        username: firstUser,
+        displayName,
+        pin: "1234"
+    });
+    assert.equal(first.response.status, 201);
+
+    const second = await post("/api/register", {
+        username: secondUser,
+        displayName,
+        pin: "1234"
+    });
+    assert.equal(second.response.status, 409);
+});
+
 test("newly registered account appears on leaderboard", async () => {
     const username = uniqueUser("board");
     const displayName = `LB${username}`.slice(0, 20);
