@@ -24,13 +24,13 @@
   "admin": {
     "name": "admin",
     "balance": 1050,
-    "wins": 1,
-    "losses": 5,
+    "wins": 6,
+    "losses": 13,
     "pushes": 0,
-    "gamesPlayed": 6,
+    "gamesPlayed": 19,
     "totalEarnings": 100,
     "lastDailyClaim": 1780266981546,
-    "runsCompleted": 1,
-    "highestChapter": 2
+    "runsCompleted": 6,
+    "highestChapter": 3
   }
 }

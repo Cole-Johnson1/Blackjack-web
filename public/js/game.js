@@ -22,14 +22,19 @@ const matchOverSection = document.getElementById("matchOverSection");
 const matchWinnerText = document.getElementById("matchWinnerText");
 
 const abilityControls = document.getElementById("abilityControls");
+const comboDisplay = document.getElementById("comboDisplay");
 const abilityUsedNote = document.getElementById("abilityUsedNote");
 
 const hitButton = document.getElementById("hitButton");
 const standButton = document.getElementById("standButton");
 const doubleButton = document.getElementById("doubleButton");
 const splitButton = document.getElementById("splitButton");
-const backToMenuButton = document.getElementById("backToMenuButton");
+const menuBurgerButton = document.getElementById("menuBurgerButton");
 const rematchButton = document.getElementById("rematchButton");
+
+const escMenuOverlay = document.getElementById("escMenuOverlay");
+const escResumeButton = document.getElementById("escResumeButton");
+const escExitButton = document.getElementById("escExitButton");
 
 if (splitButton && splitButton.isConnected) {
     splitButton.remove();
@@ -75,6 +80,7 @@ let blessingTimerSeconds = 30;
 let blessingChoiceMade = false;
 let turnTimerInterval = null;
 let turnTimerSeconds = 25;
+let escMenuOpen = false;
 
 const pageParams = new URLSearchParams(window.location.search);
 const singlePlayerMode = pageParams.get("single") === "1";
@@ -126,6 +132,7 @@ function showUpgradeModal(state) {
         return;
     }
 
+    setEscMenuOpen(false);
     upgradeModalVisible = true;
     upgradeModalOverlay.removeAttribute("hidden");
     startModalTimer();
@@ -147,6 +154,7 @@ function showBlessingModal(state) {
         return;
     }
 
+    setEscMenuOpen(false);
     const tier = state.dealerTier || 1;
     blessingModalTitle.textContent = `Power-Up — Dealer #${tier - 1} Defeated`;
 
@@ -154,9 +162,14 @@ function showBlessingModal(state) {
     blessingResultBanner.textContent = "Dealer Slain!";
     blessingResultBanner.className = "modal-result-banner result-won";
 
+    const self = state.players[window.socket.id];
+    const blessingChoices = self && self.run && Array.isArray(self.run.pendingBlessingOptions)
+        ? self.run.pendingBlessingOptions
+        : (state.blessings || []);
+
     // Build blessing buttons dynamically from server state.
     blessingOptions.innerHTML = "";
-    (state.blessings || []).forEach(blessing => {
+    blessingChoices.forEach(blessing => {
         const btn = document.createElement("button");
         btn.className = "upgrade-option blessing-option";
         btn.dataset.blessingId = blessing.id;
@@ -363,14 +376,26 @@ function getCardAssetPath(card) {
     return `assets/cards/${card.value}${card.suit}.svg`;
 }
 
-function renderCards(cards) {
-    return cards.map(card => {
+function renderCards(cards, options = {}) {
+    const owner = options.owner === "dealer" ? "dealer" : "player";
+
+    return cards.map((card, index) => {
+        const delay = owner === "dealer" ? index * 0.07 : index * 0.055;
+        const duration = Math.min(0.42, 0.24 + (index * 0.018));
+        const xOffset = owner === "dealer"
+            ? ((index % 2 === 0 ? -1 : 1) * (10 + (index * 1.5)))
+            : ((index % 2 === 0 ? -1 : 1) * (7 + (index * 1.2)));
+        const rotation = owner === "dealer"
+            ? (-8 + (index * 2.2))
+            : (-6 + (index * 1.8));
+        const style = `style="--deal-delay:${delay.toFixed(3)}s; --deal-duration:${duration.toFixed(3)}s; --deal-x:${xOffset.toFixed(1)}px; --deal-rot:${rotation.toFixed(1)}deg;"`;
+
         if (card.hidden) {
-            return '<img class="playing-card-image" src="assets/cards/back.svg" alt="Hidden card">';
+            return `<img class="playing-card-image deal-owner-${owner}" ${style} src="assets/cards/back.svg" alt="Hidden card">`;
         }
 
         const label = `${card.value}${card.suit}`;
-        return `<img class="playing-card-image" src="${getCardAssetPath(card)}" alt="${label}" loading="lazy">`;
+        return `<img class="playing-card-image deal-owner-${owner}" ${style} src="${getCardAssetPath(card)}" alt="${label}" loading="lazy">`;
     }).join("");
 }
 
@@ -418,12 +443,65 @@ function renderBars(current, max) {
 
 const bloodScreen   = document.getElementById("bloodScreen");
 const hitFlashEl    = document.getElementById("hitFlash");
+const dealerImpactEl = document.getElementById("dealerImpact");
+const playerImpactEl = document.getElementById("playerImpact");
 const gameViewport  = document.getElementById("gameViewport");
 const dealerSprite  = document.getElementById("dealerSprite");
+const dealerCardsEl = document.getElementById("dealerCards");
+const abilityHudEl  = document.querySelector(".ability-hud");
 const dealerArmL    = document.getElementById("dealerArmLeft");
 const dealerArmR    = document.getElementById("dealerArmRight");
 const playerArmL    = document.getElementById("playerArmLeft");
 const playerArmR    = document.getElementById("playerArmRight");
+
+function updateDealerTierMotion(tier) {
+    if (!dealerSprite) return;
+
+    dealerSprite.classList.remove(
+        "tier-low",
+        "tier-mid",
+        "tier-high",
+        "theme-crimson",
+        "theme-emerald",
+        "theme-royal",
+        "theme-amber"
+    );
+
+    const palette = ["theme-crimson", "theme-emerald", "theme-royal", "theme-amber"];
+    dealerSprite.classList.add(palette[(Math.max(1, tier) - 1) % palette.length]);
+
+    if (tier >= 5) {
+        dealerSprite.classList.add("tier-high");
+        return;
+    }
+
+    if (tier >= 3) {
+        dealerSprite.classList.add("tier-mid");
+        return;
+    }
+
+    dealerSprite.classList.add("tier-low");
+}
+
+function updateAtmosphere(state) {
+    if (!gameViewport) return;
+
+    gameViewport.classList.remove(
+        "atmo-crimson",
+        "atmo-emerald",
+        "atmo-royal",
+        "atmo-amber",
+        "atmo-high"
+    );
+
+    const palette = ["atmo-crimson", "atmo-emerald", "atmo-royal", "atmo-amber"];
+    const tier = Math.max(1, state.dealerTier || 1);
+    gameViewport.classList.add(palette[(tier - 1) % palette.length]);
+
+    if (tier >= 5) {
+        gameViewport.classList.add("atmo-high");
+    }
+}
 
 function updateBloodScreen(hpPct) {
     if (!bloodScreen) return;
@@ -435,16 +513,34 @@ function updateBloodScreen(hpPct) {
     }
 }
 
-function triggerHitFlash() {
+function triggerHitFlash(intensity = "medium") {
     if (!hitFlashEl) return;
+    hitFlashEl.classList.remove("light", "heavy");
+    if (intensity === "light") hitFlashEl.classList.add("light");
+    if (intensity === "heavy") hitFlashEl.classList.add("heavy");
     hitFlashEl.classList.add("active");
     setTimeout(() => hitFlashEl.classList.remove("active"), 120);
 }
 
-function triggerScreenShake() {
+function triggerImpactBurst(el) {
+    if (!el) return;
+    el.classList.remove("active");
+    void el.offsetWidth;
+    el.classList.add("active");
+}
+
+function triggerScreenShake(intensity = "medium") {
     if (!gameViewport) return;
-    gameViewport.classList.add("screen-shake");
-    setTimeout(() => gameViewport.classList.remove("screen-shake"), 400);
+    gameViewport.classList.remove("screen-shake-light", "screen-shake", "screen-shake-heavy");
+
+    const shakeClass = intensity === "heavy"
+        ? "screen-shake-heavy"
+        : intensity === "light"
+            ? "screen-shake-light"
+            : "screen-shake";
+    gameViewport.classList.add(shakeClass);
+    const duration = intensity === "heavy" ? 460 : intensity === "light" ? 260 : 400;
+    setTimeout(() => gameViewport.classList.remove(shakeClass), duration);
 }
 
 function animatePlayerSmack() {
@@ -461,11 +557,18 @@ function animatePlayerSmack() {
     // Dealer reacts to being hit
     if (dealerSprite) {
         setTimeout(() => {
+            triggerImpactBurst(dealerImpactEl);
+            triggerScreenShake("light");
+            if (dealerCardsEl) {
+                dealerCardsEl.classList.remove("hit-rattle");
+                void dealerCardsEl.offsetWidth;
+                dealerCardsEl.classList.add("hit-rattle");
+            }
             dealerSprite.classList.remove("hit");
             void dealerSprite.offsetWidth;
             dealerSprite.classList.add("hit");
             dealerSprite.addEventListener("animationend", () => dealerSprite.classList.remove("hit"), { once: true });
-        }, 150);
+        }, 120);
     }
 }
 
@@ -477,10 +580,20 @@ function animateDealerSmack() {
     dealerArmR.classList.add("smacking");
     dealerArmR.addEventListener("animationend", () => dealerArmR.classList.remove("smacking"), { once: true });
 
+    if (playerArmL && playerArmR) {
+        [playerArmL, playerArmR].forEach(arm => {
+            arm.classList.remove("recoil-hit");
+            void arm.offsetWidth;
+            arm.classList.add("recoil-hit");
+            arm.addEventListener("animationend", () => arm.classList.remove("recoil-hit"), { once: true });
+        });
+    }
+
     // Screen shake + hit flash for player getting hit
     setTimeout(() => {
-        triggerHitFlash();
-        triggerScreenShake();
+        triggerImpactBurst(playerImpactEl);
+        triggerHitFlash("heavy");
+        triggerScreenShake("heavy");
     }, 200);
 }
 
@@ -575,7 +688,7 @@ function renderPlayers(players, currentTurnId, phase) {
         article.className = `player-card ${isCurrent ? "active-turn" : ""}`;
 
         const handMarkup = run.hand.length
-            ? renderCards(run.hand)
+            ? renderCards(run.hand, { owner: "player" })
             : "<span class=\"subtle\">No cards</span>";
 
         const hasSplitDisplay = !!run.splitActive;
@@ -634,7 +747,7 @@ function renderPlayers(players, currentTurnId, phase) {
                             <span class="split-hand-state">${status}</span>
                         </div>
                         <p class="split-hand-value">Value ${handValue}</p>
-                        <div class="card-row">${segment.cards.length ? renderCards(segment.cards) : "<span class='subtle'>No cards</span>"}</div>
+                        <div class="card-row">${segment.cards.length ? renderCards(segment.cards, { owner: "player" }) : "<span class='subtle'>No cards</span>"}</div>
                     </div>
                 `;
             }).join("");
@@ -678,15 +791,27 @@ function renderAbilityControls(state) {
     }
 
     const usedAbility = !!(self.run && self.run.usedAbilityThisHand);
+    const unlockedSet = new Set((self.run && self.run.unlockedAbilities) || []);
+    const unlockedAbilities = (state.abilities || []).filter(ability => unlockedSet.has(ability.id));
 
     if (abilityUsedNote) {
         abilityUsedNote.hidden = !usedAbility;
     }
 
-    state.abilities.forEach(ability => {
+    if (unlockedAbilities.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "subtle small";
+        empty.textContent = "No abilities unlocked yet. Defeat dealers to unlock new powers.";
+        abilityControls.appendChild(empty);
+        return;
+    }
+
+    unlockedAbilities.forEach(ability => {
         const btn = document.createElement("button");
         btn.className = "ability-chip";
-        const isDisabled = state.phase !== "in-round"
+        const isPassive = ability.type === "passive";
+        const isDisabled = isPassive
+            || state.phase !== "in-round"
             || state.currentTurnId !== window.socket.id
             || self.run.mana < ability.manaCost
             || !self.run.alive
@@ -700,14 +825,77 @@ function renderAbilityControls(state) {
                 <span class="ability-name">${ability.name}</span>
                 <span class="ability-desc">${ability.description}</span>
             </span>
-            <span class="ability-cost">${ability.manaCost > 0 ? ability.manaCost + " MP" : "Free"}</span>
+            <span class="ability-cost">${isPassive ? "Passive" : (ability.manaCost > 0 ? ability.manaCost + " MP" : "Free")}</span>
         `;
 
-        btn.addEventListener("click", () => {
-            window.socket.emit("useAbility", ability.id);
-        });
+        if (!isPassive) {
+            btn.addEventListener("click", () => {
+                btn.classList.remove("ability-fx");
+                void btn.offsetWidth;
+                btn.classList.add("ability-fx");
+                btn.addEventListener("animationend", () => btn.classList.remove("ability-fx"), { once: true });
+                window.socket.emit("useAbility", ability.id);
+            });
+        }
+
         abilityControls.appendChild(btn);
     });
+}
+
+function renderComboPresentation(state) {
+    const self = state.players[window.socket.id];
+
+    if (!comboDisplay || !abilityHudEl) return;
+
+    if (!self || !self.run) {
+        comboDisplay.hidden = true;
+        abilityHudEl.classList.remove("combo-ready");
+        return;
+    }
+
+    const run = self.run;
+    const comboBits = [];
+
+    if (run.emberStrikeActive) {
+        comboBits.push("Ember Strike");
+    }
+
+    if (run.focusSigilActive) {
+        comboBits.push("Focus Sigil");
+    }
+
+    if (run.siphonStrikeActive) {
+        comboBits.push("Siphon Strike");
+    }
+
+    if (run.usedManaSurge) {
+        comboBits.push("Mana Surge");
+    }
+
+    if ((run.tranceStacks || 0) > 0) {
+        comboBits.push(`Trance x${run.tranceStacks}`);
+    }
+
+    if ((run.manaSpentThisHand || 0) > 0) {
+        comboBits.push(`${run.manaSpentThisHand} Mana spent`);
+    }
+
+    if (!comboBits.length) {
+        comboDisplay.hidden = true;
+        comboDisplay.textContent = "";
+        abilityHudEl.classList.remove("combo-ready");
+        return;
+    }
+
+    const strongCombo = comboBits.length >= 3 || run.emberStrikeActive || run.focusSigilActive;
+    comboDisplay.hidden = false;
+    comboDisplay.classList.toggle("combo-heavy", strongCombo);
+    comboDisplay.classList.toggle("combo-active", !strongCombo);
+    comboDisplay.innerHTML = `
+        <span class="combo-label">Combo</span>
+        <span class="combo-values">${comboBits.join(" • ")}</span>
+    `;
+    abilityHudEl.classList.add("combo-ready");
 }
 
 function abilityIcon(id) {
@@ -715,7 +903,13 @@ function abilityIcon(id) {
         arcaneDraw: "🃏",
         mendWounds: "💚",
         emberStrike: "🔥",
-        manaSurge: "⚡"
+        manaSurge: "⚡",
+        siphonStrike: "🛡",
+        focusSigil: "🎯",
+        battleTrance: "🧠",
+        overcharge: "💥",
+        executionerInstinct: "🗡",
+        splitTorrent: "🌪"
     };
     return icons[id] || "✨";
 }
@@ -951,7 +1145,9 @@ window.socket.on("gameState", state => {
         tableStatus.textContent = "Waiting for host to start next round.";
     }
 
-    dealerCards.innerHTML = renderCards(state.dealer.hand || []);
+    updateDealerTierMotion(state.dealerTier || 1);
+    updateAtmosphere(state);
+    dealerCards.innerHTML = renderCards(state.dealer.hand || [], { owner: "dealer" });
     dealerValue.textContent = `HAND: ${state.dealer.handValue || 0}`;
     dealerCombatStats.textContent = `Tier ${state.dealerTier || 1}  •  ATK ${state.dealer.attackDamage}`;
 
@@ -959,6 +1155,7 @@ window.socket.on("gameState", state => {
     renderPlayers(state.players, state.currentTurnId, state.phase);
     renderSummary(state.lastRoundSummary);
     renderAbilityControls(state);
+    renderComboPresentation(state);
     renderProgressChoices(state);
     renderRunOver(state);
     renderRoundBanner(state);
@@ -1024,22 +1221,6 @@ splitButton.addEventListener("click", () => {
     window.socket.emit("split");
 });
 
-backToMenuButton.addEventListener("click", () => {
-    if (singlePlayerMode) {
-        backToMenuButton.disabled = true;
-        window.socket.emit("saveAndExitSolo", () => {
-            window.location.href = "menu.html";
-        });
-
-        setTimeout(() => {
-            window.location.href = "menu.html";
-        }, 400);
-        return;
-    }
-
-    window.location.href = "lobby.html";
-});
-
 function goToMenuFromGame() {
     if (singlePlayerMode) {
         window.socket.emit("saveAndExitSolo", () => {
@@ -1053,6 +1234,76 @@ function goToMenuFromGame() {
     }
 
     window.location.href = "menu.html";
+}
+
+function setEscMenuOpen(open) {
+    escMenuOpen = !!open;
+    if (escMenuOverlay) {
+        if (escMenuOpen) {
+            escMenuOverlay.removeAttribute("hidden");
+        }
+        else {
+            escMenuOverlay.setAttribute("hidden", "");
+        }
+    }
+
+    if (menuBurgerButton) {
+        menuBurgerButton.setAttribute("aria-expanded", escMenuOpen ? "true" : "false");
+    }
+}
+
+function canOpenEscMenu() {
+    return !upgradeModalVisible && !blessingModalVisible && !!(matchOverSection && matchOverSection.hidden);
+}
+
+function openEscMenu() {
+    if (!canOpenEscMenu()) {
+        return;
+    }
+
+    setEscMenuOpen(true);
+    if (escResumeButton) {
+        escResumeButton.focus();
+    }
+}
+
+function closeEscMenu() {
+    setEscMenuOpen(false);
+    if (menuBurgerButton) {
+        menuBurgerButton.focus();
+    }
+}
+
+if (menuBurgerButton) {
+    menuBurgerButton.addEventListener("click", () => {
+        if (escMenuOpen) {
+            closeEscMenu();
+        }
+        else {
+            openEscMenu();
+        }
+    });
+}
+
+if (escResumeButton) {
+    escResumeButton.addEventListener("click", () => {
+        closeEscMenu();
+    });
+}
+
+if (escExitButton) {
+    escExitButton.addEventListener("click", () => {
+        setEscMenuOpen(false);
+        goToMenuFromGame();
+    });
+}
+
+if (escMenuOverlay) {
+    escMenuOverlay.addEventListener("click", event => {
+        if (event.target === escMenuOverlay) {
+            closeEscMenu();
+        }
+    });
 }
 
 rematchButton.addEventListener("click", () => {
@@ -1071,7 +1322,12 @@ document.addEventListener("keydown", event => {
 
     if (event.key === "Escape") {
         event.preventDefault();
-        goToMenuFromGame();
+        if (escMenuOpen) {
+            closeEscMenu();
+        }
+        else {
+            openEscMenu();
+        }
         return;
     }
 

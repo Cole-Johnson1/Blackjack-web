@@ -62,6 +62,60 @@
     background: rgba(255, 60, 60, 0.38);
 }
 
+.hit-flash.active.light {
+    background: rgba(255, 90, 90, 0.26);
+}
+
+.hit-flash.active.heavy {
+    background: rgba(255, 45, 45, 0.5);
+}
+
+.impact-burst {
+    position: fixed;
+    width: 132px;
+    height: 132px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9996;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+    background:
+        radial-gradient(circle, rgba(255, 238, 150, 0.96) 0 12%, rgba(255, 160, 45, 0.92) 13% 26%, rgba(255, 60, 30, 0.52) 27% 48%, transparent 49% 100%);
+    filter: saturate(1.2);
+}
+
+.impact-burst::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    background: conic-gradient(
+        rgba(255, 255, 220, 0.75) 0deg,
+        rgba(255, 180, 60, 0.7) 42deg,
+        transparent 70deg,
+        rgba(255, 255, 220, 0.74) 124deg,
+        transparent 160deg,
+        rgba(255, 160, 60, 0.7) 210deg,
+        transparent 250deg,
+        rgba(255, 240, 170, 0.72) 302deg,
+        transparent 340deg
+    );
+}
+
+.impact-burst.active {
+    animation: impactBurst 0.32s cubic-bezier(0.2, 0.74, 0.22, 1) forwards;
+}
+
+.dealer-impact {
+    top: 36%;
+    left: 50%;
+}
+
+.player-impact {
+    top: 72%;
+    left: 50%;
+}
+
 /* ── MAIN VIEWPORT GRID ──────────────────────────────────────── */
 
 .game-viewport {
@@ -71,10 +125,90 @@
     height: 100vh;
     overflow: hidden;
     position: relative;
+    isolation: isolate;
 }
 
 .game-viewport.screen-shake {
     animation: screenShake 0.35s ease-out;
+}
+
+.game-viewport.screen-shake-light {
+    animation: screenShakeLight 0.22s ease-out;
+}
+
+.game-viewport.screen-shake-heavy {
+    animation: screenShakeHeavy 0.44s ease-out;
+}
+
+.game-viewport::before,
+.game-viewport::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.game-viewport::before {
+    background:
+        /* ring posts */
+        radial-gradient(circle at 4% 24%, rgba(255, 220, 160, 0.22) 0 4px, transparent 5px),
+        radial-gradient(circle at 96% 24%, rgba(255, 220, 160, 0.22) 0 4px, transparent 5px),
+        radial-gradient(circle at 4% 76%, rgba(255, 220, 160, 0.22) 0 4px, transparent 5px),
+        radial-gradient(circle at 96% 76%, rgba(255, 220, 160, 0.22) 0 4px, transparent 5px),
+        /* ring ropes */
+        linear-gradient(180deg, transparent 14%, rgba(240, 220, 180, 0.16) 14% 15%, transparent 15% 42%, rgba(240, 220, 180, 0.16) 42% 43%, transparent 43% 57%, rgba(240, 220, 180, 0.16) 57% 58%, transparent 58% 84%, rgba(240, 220, 180, 0.16) 84% 85%, transparent 85%),
+        linear-gradient(90deg, transparent 6%, rgba(240, 220, 180, 0.08) 6% 7%, transparent 7% 93%, rgba(240, 220, 180, 0.08) 93% 94%, transparent 94%),
+        radial-gradient(circle at 18% 18%, rgba(255, 232, 120, 0.08) 0 10%, transparent 30%),
+        radial-gradient(circle at 78% 12%, rgba(95, 200, 140, 0.08) 0 9%, transparent 26%),
+        radial-gradient(circle at 52% 52%, rgba(255, 255, 255, 0.03) 0 12%, transparent 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 24%, transparent 76%, rgba(0, 0, 0, 0.12) 100%);
+    mix-blend-mode: screen;
+    opacity: 0.9;
+    animation: ambientDrift 16s ease-in-out infinite;
+}
+
+.game-viewport::after {
+    background:
+        radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.04) 0 2px, transparent 3px),
+        radial-gradient(circle at 50% 90%, rgba(255, 255, 255, 0.04) 0 2px, transparent 3px),
+        radial-gradient(ellipse at 50% 18%, rgba(255, 214, 120, 0.06) 0%, transparent 45%),
+        radial-gradient(ellipse at 50% 82%, rgba(0, 0, 0, 0.1) 0%, transparent 56%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 12%, transparent 88%, rgba(0, 0, 0, 0.14) 100%);
+    opacity: 0.78;
+}
+
+.game-viewport.atmo-crimson {
+    --ambient-color-a: rgba(255, 118, 118, 0.16);
+    --ambient-color-b: rgba(112, 18, 32, 0.13);
+    --ambient-color-c: rgba(255, 214, 128, 0.06);
+}
+
+.game-viewport.atmo-emerald {
+    --ambient-color-a: rgba(110, 255, 187, 0.14);
+    --ambient-color-b: rgba(18, 89, 54, 0.12);
+    --ambient-color-c: rgba(212, 255, 226, 0.05);
+}
+
+.game-viewport.atmo-royal {
+    --ambient-color-a: rgba(153, 132, 255, 0.15);
+    --ambient-color-b: rgba(38, 24, 96, 0.14);
+    --ambient-color-c: rgba(244, 236, 255, 0.05);
+}
+
+.game-viewport.atmo-amber {
+    --ambient-color-a: rgba(255, 191, 109, 0.16);
+    --ambient-color-b: rgba(120, 67, 16, 0.13);
+    --ambient-color-c: rgba(255, 245, 202, 0.05);
+}
+
+.game-viewport.atmo-high::before {
+    opacity: 1;
+    filter: saturate(1.1) blur(0.4px);
+}
+
+.game-viewport.atmo-high::after {
+    opacity: 0.92;
 }
 
 /* ── TOP HUD BAR ─────────────────────────────────────────────── */
@@ -83,7 +217,7 @@
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    padding: 0 72px 0 16px; /* right pad for the Back button */
+    padding: 0 16px 0 58px; /* left pad for the burger button */
     background: rgba(0, 0, 0, 0.72);
     border-bottom: 3px solid #1a3018;
     box-shadow: 0 3px 0 #0a1808, 0 6px 0 rgba(0, 0, 0, 0.3);
@@ -188,13 +322,13 @@
     display: grid;
     grid-template-rows: auto 1fr;
     background:
-        radial-gradient(ellipse at 50% 100%, rgba(30, 60, 20, 0.6) 0%, transparent 70%),
+        radial-gradient(ellipse at 50% 100%, var(--ambient-color-b, rgba(30, 60, 20, 0.6)) 0%, transparent 70%),
         linear-gradient(180deg, #050e06 0%, #0a1a0c 100%);
     border-bottom: 8px solid #3a1e00;
     position: relative;
     overflow: hidden;
-    min-height: 160px;
-    max-height: 240px;
+    min-height: 180px;
+    max-height: 270px;
 }
 
 /* Atmospheric ceiling light effect */
@@ -206,8 +340,24 @@
     transform: translateX(-50%);
     width: 300px;
     height: 180px;
-    background: radial-gradient(ellipse, rgba(255, 220, 120, 0.08) 0%, transparent 70%);
+    background:
+        radial-gradient(ellipse, var(--ambient-color-c, rgba(255, 220, 120, 0.08)) 0%, transparent 70%),
+        radial-gradient(ellipse, rgba(255, 255, 255, 0.04) 0%, transparent 54%);
     pointer-events: none;
+}
+
+.dealer-section::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse at 50% 18%, var(--ambient-color-a, rgba(255, 220, 120, 0.08)) 0%, transparent 58%),
+        radial-gradient(ellipse at 50% 92%, rgba(0, 0, 0, 0.18) 0%, transparent 52%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 30%, transparent 80%, rgba(0, 0, 0, 0.08) 100%);
+    mix-blend-mode: screen;
+    opacity: 0.85;
+    animation: dealerGlowPulse 7.5s ease-in-out infinite;
 }
 
 /* Dealer stats HUD strip (top of dealer zone) */
@@ -271,10 +421,11 @@
 /* Dealer arena row (sprite + cards side by side) */
 .dealer-arena {
     display: flex;
+    flex-direction: row;
     align-items: flex-end;
     justify-content: center;
-    gap: 20px;
-    padding: 6px 16px 4px;
+    gap: 28px;
+    padding: 10px 20px 10px;
     position: relative;
     flex: 1;
     overflow: hidden;
@@ -287,7 +438,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-bottom: 2px;
+    padding-bottom: 0;
+    transform: translateY(28px) scale(1.24);
+    transform-origin: center bottom;
 }
 
 .dealer-sprite {
@@ -296,6 +449,79 @@
     height: 108px;
     image-rendering: pixelated;
     transition: filter 0.3s ease;
+    --dealer-idle-speed: 2.9s;
+    --dealer-idle-y: 2px;
+    --dealer-idle-rot: 1.1deg;
+    --dealer-skin: #d4a574;
+    --dealer-skin-shadow: #7a4f30;
+    --dealer-suit: #1c2a3a;
+    --dealer-suit-dark: #0a1520;
+    --dealer-suit-light: #3a5167;
+    --dealer-hat: #1a1a1a;
+    --dealer-hat-band: #8b0000;
+    --dealer-eye: #1a0d05;
+    --dealer-face-line: #2c170b;
+    animation: dealerIdle var(--dealer-idle-speed) ease-in-out infinite;
+}
+
+.dealer-sprite.tier-low {
+    --dealer-idle-speed: 3.1s;
+    --dealer-idle-y: 1.6px;
+    --dealer-idle-rot: 0.8deg;
+}
+
+.dealer-sprite.tier-mid {
+    --dealer-idle-speed: 2.5s;
+    --dealer-idle-y: 2.6px;
+    --dealer-idle-rot: 1.5deg;
+}
+
+.dealer-sprite.tier-high {
+    --dealer-idle-speed: 2.05s;
+    --dealer-idle-y: 3.1px;
+    --dealer-idle-rot: 2deg;
+    filter: saturate(1.08);
+    animation: dealerIdle var(--dealer-idle-speed) ease-in-out infinite, dealerFeint 5.8s ease-in-out infinite;
+}
+
+.dealer-sprite.theme-crimson {
+    --dealer-skin: #d49c78;
+    --dealer-skin-shadow: #8a4b35;
+    --dealer-suit: #35171d;
+    --dealer-suit-dark: #17090e;
+    --dealer-suit-light: #55303a;
+    --dealer-hat: #20171b;
+    --dealer-hat-band: #b43b45;
+}
+
+.dealer-sprite.theme-emerald {
+    --dealer-skin: #d9a97d;
+    --dealer-skin-shadow: #745233;
+    --dealer-suit: #163326;
+    --dealer-suit-dark: #08140f;
+    --dealer-suit-light: #295743;
+    --dealer-hat: #111817;
+    --dealer-hat-band: #2ca36f;
+}
+
+.dealer-sprite.theme-royal {
+    --dealer-skin: #cfa17a;
+    --dealer-skin-shadow: #6f4652;
+    --dealer-suit: #231e4f;
+    --dealer-suit-dark: #100f29;
+    --dealer-suit-light: #433b7c;
+    --dealer-hat: #141125;
+    --dealer-hat-band: #7b5cf0;
+}
+
+.dealer-sprite.theme-amber {
+    --dealer-skin: #d1a067;
+    --dealer-skin-shadow: #8a5320;
+    --dealer-suit: #40301a;
+    --dealer-suit-dark: #1a1008;
+    --dealer-suit-light: #6a4a24;
+    --dealer-hat: #1f1b12;
+    --dealer-hat-band: #c78b24;
 }
 
 /* Top hat brim */
@@ -306,8 +532,8 @@
     transform: translateX(-50%);
     width: 58px;
     height: 5px;
-    background: #222;
-    border: 2px solid #444;
+    background: var(--dealer-hat);
+    border: 2px solid color-mix(in srgb, var(--dealer-hat), white 18%);
     box-shadow: 0 2px 0 #111;
 }
 
@@ -319,8 +545,8 @@
     left: 5px;
     width: 40px;
     height: 18px;
-    background: #1a1a1a;
-    border: 2px solid #333;
+    background: color-mix(in srgb, var(--dealer-hat), white 8%);
+    border: 2px solid color-mix(in srgb, var(--dealer-hat), white 18%);
     border-bottom: none;
 }
 
@@ -332,7 +558,7 @@
     left: 5px;
     width: 40px;
     height: 3px;
-    background: #8b0000;
+    background: var(--dealer-hat-band);
 }
 
 .dealer-head {
@@ -342,27 +568,54 @@
     transform: translateX(-50%);
     width: 36px;
     height: 34px;
-    background: #d4a574;
-    border: 3px solid #7a4f30;
-    /* left eye */
+    background:
+        radial-gradient(circle at 12px 12px, rgba(255, 230, 205, 0.42) 0 3px, transparent 3.2px),
+        radial-gradient(circle at 24px 12px, rgba(255, 230, 205, 0.32) 0 3px, transparent 3.2px),
+        linear-gradient(180deg, color-mix(in srgb, var(--dealer-skin), white 8%) 0%, var(--dealer-skin) 62%, color-mix(in srgb, var(--dealer-skin), black 8%) 100%);
+    border: 3px solid var(--dealer-skin-shadow);
+    /* cheek and brow shadows for depth */
     box-shadow:
-        inset -10px -10px 0 2px rgba(0, 0, 0, 0),
-        inset 9px 10px 0 3px #3a2010,
-        inset -9px 10px 0 3px #3a2010;
+        inset 0 2px 0 rgba(255, 225, 195, 0.35),
+        inset 0 -4px 0 rgba(70, 35, 20, 0.22),
+        inset 8px 9px 0 3px color-mix(in srgb, var(--dealer-face-line), black 10%),
+        inset -8px 9px 0 3px color-mix(in srgb, var(--dealer-face-line), black 10%),
+        0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-/* Moustache */
+/* Angry eyebrows, eyes, and nose bridge */
+.dealer-head::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 12px;
+    background:
+        linear-gradient(165deg, transparent 45%, var(--dealer-face-line) 46%, var(--dealer-face-line) 57%, transparent 58%) left top / 11px 8px no-repeat,
+        linear-gradient(15deg, transparent 45%, var(--dealer-face-line) 46%, var(--dealer-face-line) 57%, transparent 58%) right top / 11px 8px no-repeat,
+        radial-gradient(circle at 6px 9px, var(--dealer-eye) 0 2px, transparent 2.2px),
+        radial-gradient(circle at 18px 9px, var(--dealer-eye) 0 2px, transparent 2.2px),
+        radial-gradient(circle at 12px 10px, rgba(255, 255, 255, 0.15) 0 1px, transparent 1.2px),
+        linear-gradient(180deg, color-mix(in srgb, var(--dealer-skin), black 8%) 0 100%);
+}
+
+/* Moustache + frown */
 .dealer-head::after {
     content: '';
     position: absolute;
-    bottom: 7px;
+    bottom: 5px;
     left: 50%;
     transform: translateX(-50%);
-    width: 20px;
-    height: 5px;
-    background: #3a2010;
-    border-radius: 0 0 4px 4px;
-    clip-path: polygon(0 0, 100% 0, 85% 100%, 50% 60%, 15% 100%);
+    width: 22px;
+    height: 9px;
+    background:
+        linear-gradient(180deg, transparent 0 52%, var(--dealer-face-line) 53% 60%, transparent 61% 100%),
+        linear-gradient(180deg, color-mix(in srgb, var(--dealer-face-line), black 8%) 0 100%),
+        radial-gradient(circle at 6px 6px, rgba(255, 255, 255, 0.1) 0 1px, transparent 1.2px),
+        radial-gradient(circle at 16px 6px, rgba(255, 255, 255, 0.1) 0 1px, transparent 1.2px);
+    border-radius: 0 0 5px 5px;
+    clip-path: polygon(0 0, 100% 0, 88% 100%, 50% 60%, 12% 100%);
 }
 
 .dealer-torso {
@@ -372,8 +625,8 @@
     transform: translateX(-50%);
     width: 48px;
     height: 44px;
-    background: #1c2a3a;
-    border: 3px solid #0a1520;
+    background: linear-gradient(180deg, var(--dealer-suit-light) 0%, var(--dealer-suit) 48%, var(--dealer-suit-dark) 100%);
+    border: 3px solid var(--dealer-suit-dark);
 }
 
 /* White shirt / bow tie */
@@ -385,7 +638,8 @@
     transform: translateX(-50%);
     width: 16px;
     height: 100%;
-    background: rgba(255, 255, 255, 0.1);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.06) 100%);
 }
 
 .dealer-torso::after {
@@ -396,16 +650,39 @@
     transform: translateX(-50%);
     width: 12px;
     height: 7px;
-    background: white;
+    background:
+        linear-gradient(180deg, #ffffff 0%, #e6e6e6 100%);
     clip-path: polygon(0 0, 50% 45%, 100% 0, 100% 100%, 50% 55%, 0 100%);
+}
+
+.dealer-torso::marker {
+    content: '';
+}
+
+.dealer-torso {
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+        inset -7px 0 0 rgba(0, 0, 0, 0.12),
+        inset 7px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+.dealer-torso::after {
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.08),
+        0 1px 0 rgba(0, 0, 0, 0.12);
+}
+
+.dealer-torso::before,
+.dealer-torso::after {
+    pointer-events: none;
 }
 
 .dealer-arm {
     position: absolute;
     width: 15px;
     height: 44px;
-    background: #1c2a3a;
-    border: 3px solid #0a1520;
+    background: linear-gradient(180deg, var(--dealer-suit-light) 0%, var(--dealer-suit) 48%, var(--dealer-suit-dark) 100%);
+    border: 3px solid var(--dealer-suit-dark);
     top: 36px;
     transform-origin: top center;
 }
@@ -418,9 +695,12 @@
     transform: translateX(-50%);
     width: 13px;
     height: 13px;
-    background: #d4a574;
-    border: 2px solid #7a4f30;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--dealer-skin), white 8%) 0%, var(--dealer-skin) 70%, color-mix(in srgb, var(--dealer-skin), black 12%) 100%);
+    border: 2px solid var(--dealer-skin-shadow);
     border-radius: 2px;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+        inset -3px -2px 0 rgba(0, 0, 0, 0.1);
 }
 
 .dealer-arm-left {
@@ -437,17 +717,23 @@
 .dealer-cards-zone {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    flex: 1;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 4px;
+    flex: 0;
     max-width: 560px;
+    min-width: 220px;
     overflow: hidden;
 }
 
 .dealer-cards-row {
-    justify-content: center;
+    justify-content: flex-start;
     flex-wrap: wrap;
     gap: 5px;
+}
+
+.dealer-cards-row.hit-rattle {
+    animation: dealerCardsRattle 0.24s ease-out;
 }
 
 .hand-value-hud {
@@ -462,8 +748,9 @@
 .dealer-combat-stats {
     font-family: "VT323", monospace;
     font-size: 1rem;
-    color: #778877;
+    color: #b8c7b8;
     margin: 0;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
 }
 
 /* ── TABLE MESSAGES STRIP ────────────────────────────────────── */
@@ -474,30 +761,63 @@
     justify-content: center;
     gap: 16px;
     padding: 0 16px;
-    /* Felt table edge */
-    background:
-        linear-gradient(180deg, #3a1e00 0%, #4a2800 50%, #3a1e00 100%);
-    border-top: 2px solid #5a3000;
-    border-bottom: 2px solid #2a1200;
-    box-shadow:
-        inset 0 2px 4px rgba(0, 0, 0, 0.4),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+    background: transparent;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     min-height: 36px;
+    z-index: 12;
 }
 
-/* wood grain texture */
+/* blackjack table / ring apron */
 .table-messages::before {
     content: '';
     position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
+    left: 50%;
+    top: 50%;
+    width: min(86vw, 980px);
+    height: 92px;
+    transform: translate(-50%, -50%);
+    border-radius: 999px;
+    background:
+        radial-gradient(ellipse at 50% 42%, rgba(38, 120, 58, 0.98) 0%, rgba(29, 92, 44, 0.98) 52%, rgba(18, 54, 27, 0.98) 100%);
+    border: 5px solid #5a3210;
+    box-shadow:
+        0 0 0 6px rgba(0, 0, 0, 0.28),
+        inset 0 0 0 2px rgba(255, 232, 155, 0.06),
+        inset 0 -10px 22px rgba(0, 0, 0, 0.28),
+        0 14px 26px rgba(0, 0, 0, 0.26),
+        0 0 0 1px rgba(255, 239, 204, 0.06);
+    background-image: repeating-linear-gradient(
         90deg,
-        rgba(255, 200, 100, 0.04) 0px, rgba(255, 200, 100, 0.04) 2px,
-        transparent 2px, transparent 12px
-    );
+        rgba(255, 220, 155, 0.035) 0px, rgba(255, 220, 155, 0.035) 2px,
+        transparent 2px, transparent 14px
+    ),
+    radial-gradient(ellipse at 50% 42%, rgba(38, 120, 58, 0.98) 0%, rgba(29, 92, 44, 0.98) 52%, rgba(18, 54, 27, 0.98) 100%);
     pointer-events: none;
+}
+
+.table-messages::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: min(72vw, 820px);
+    height: 58px;
+    transform: translate(-50%, -50%);
+    border-radius: 999px;
+    background:
+        radial-gradient(ellipse at 50% 28%, rgba(255, 255, 255, 0.08) 0%, transparent 46%),
+        radial-gradient(ellipse at 50% 60%, rgba(8, 30, 12, 0.06) 0%, transparent 62%);
+    border-top: 2px solid rgba(255, 245, 208, 0.1);
+    border-bottom: 2px solid rgba(0, 0, 0, 0.22);
+    pointer-events: none;
+}
+
+.table-messages .round-banner-pov,
+.table-messages .game-message-pov {
+    position: relative;
+    z-index: 1;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
 }
 
 .round-banner-pov {
@@ -541,7 +861,7 @@
 
 .player-section {
     display: grid;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: 1fr auto auto;
     overflow: hidden;
     position: relative;
     /* Felt table */
@@ -559,15 +879,40 @@
         linear-gradient(180deg, #1a3a1e 0%, #163218 50%, #122a14 100%);
 }
 
+.player-section::before,
+.player-section::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.player-section::before {
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 44%),
+        radial-gradient(ellipse at 50% 30%, rgba(255, 226, 140, 0.06) 0%, transparent 42%),
+        radial-gradient(ellipse at 50% 100%, var(--ambient-color-b, rgba(0, 0, 0, 0.14)) 0%, transparent 62%);
+    opacity: 0.72;
+    mix-blend-mode: screen;
+}
+
+.player-section::after {
+    background:
+        linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.02) 15%, transparent 48%, rgba(0, 0, 0, 0.1) 100%),
+        radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.04) 0%, transparent 35%);
+    opacity: 0.8;
+}
+
 .player-cards-zone {
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding: 8px 16px 4px;
+    padding: 22px 16px 0;
     overflow: hidden;
     flex-wrap: wrap;
     align-content: flex-start;
     gap: 8px;
+    transform: translateY(10px);
 }
 
 /* ── PLAYER CARD (compact POV version) ───────────────────────── */
@@ -581,13 +926,14 @@
 }
 
 .player-card {
-    border: 2px solid rgba(255, 255, 255, 0.18);
-    background: rgba(0, 0, 0, 0.32);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.42);
     border-radius: 3px;
     padding: 6px 10px;
     min-width: 180px;
     max-width: 400px;
     flex: 1;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
 .player-card.active-turn {
@@ -597,17 +943,37 @@
         0 0 16px rgba(255, 227, 111, 0.2);
 }
 
-/* ── PLAYER ARMS + CONTROLS ROW ──────────────────────────────── */
+/* ── ACTIONS CENTER BAR ─────────────────────────────────────── */
+
+.actions-center-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 6px 12px 4px;
+    background: rgba(0, 0, 0, 0.28);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+}
+
+.actions-center-bar .primary-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    width: auto;
+}
+
+/* ── PLAYER ARMS ROW ─────────────────────────────────────────── */
 
 .player-pov-row {
-    display: grid;
-    grid-template-columns: minmax(180px, 220px) 1fr minmax(180px, 220px);
-    gap: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
     padding: 0 6px 4px;
-    align-items: end;
     min-height: 150px;
     max-height: 180px;
-    overflow: hidden;
+    overflow: visible;
 }
 
 /* Abilities panel */
@@ -615,12 +981,21 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    height: 100%;
+}
+
+.abilities-panel-floating {
+    position: fixed;
+    right: 12px;
+    bottom: 62px;
+    z-index: 85;
+    width: clamp(260px, 26vw, 380px);
+    max-height: min(42vh, 380px);
+    pointer-events: auto;
 }
 
 .abilities-panel .ability-hud {
     margin: 0;
-    max-height: 160px;
+    max-height: min(42vh, 380px);
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: thin;
@@ -631,15 +1006,16 @@
 
 .player-arms-pov {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: flex-end;
+    gap: 0;
     height: 100%;
-    overflow: hidden;
+    overflow: visible;
     position: relative;
 }
 
 .player-arm-gap {
-    flex: 1;
+    flex: 0 0 clamp(48px, 11vw, 120px);
 }
 
 .player-arm {
@@ -651,62 +1027,56 @@
     bottom: 0;
 }
 
-/* Sleeve (upper arm) */
+/* Forearm sleeve */
 .player-arm::before {
+    content: '';
+    position: absolute;
+    top: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 56px;
+    height: 104px;
+    background: linear-gradient(180deg, #305779 0%, #2a4a6a 48%, #223f5b 100%);
+    border: 3px solid #152535;
+    border-top: 4px solid #0e1c2a;
+    border-radius: 5px;
+    /* sleeve edge + depth */
+    box-shadow: inset -4px 0 0 rgba(0, 0, 0, 0.2), inset 4px 0 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Fist/knuckles */
+.player-arm::after {
     content: '';
     position: absolute;
     top: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 58px;
-    height: 88px;
-    background: #2a4a6a;
-    border: 3px solid #152535;
-    border-bottom: 4px solid #0e1c2a;
-    /* sleeve shadow */
-    box-shadow: inset -4px 0 0 rgba(0, 0, 0, 0.2), inset 4px 0 0 rgba(255, 255, 255, 0.06);
-}
-
-/* Hand/wrist */
-.player-arm::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 54px;
-    height: 58px;
-    background: #c8855a;
+    width: 56px;
+    height: 50px;
+    background:
+        linear-gradient(180deg, rgba(255, 215, 185, 0.55) 0 16%, transparent 17% 100%),
+        repeating-linear-gradient(90deg, rgba(120, 62, 42, 0.42) 0 2px, transparent 2px 11px),
+        linear-gradient(180deg, #d69a72 0%, #c8855a 58%, #b8734f 100%);
     border: 3px solid #7a4030;
-    border-radius: 3px 3px 10px 10px;
-    /* knuckle detail */
+    border-radius: 10px 10px 6px 6px;
+    clip-path: polygon(6% 0, 94% 0, 98% 64%, 86% 100%, 14% 100%, 2% 64%);
+    /* knuckle + thumb depth */
     box-shadow:
-        inset -5px 0 0 rgba(0, 0, 0, 0.15),
-        inset 5px 0 0 rgba(255, 255, 255, 0.08);
+        inset -5px 0 0 rgba(0, 0, 0, 0.16),
+        inset 5px 0 0 rgba(255, 255, 255, 0.14),
+        inset 0 -8px 0 rgba(95, 50, 34, 0.2);
 }
 
 .player-arm-left {
     transform-origin: bottom left;
-    transform: rotate(-10deg) translateY(10px);
+    transform: rotate(-20deg) translate(10px, -10px);
 }
 
 .player-arm-right {
     transform-origin: bottom right;
-    transform: rotate(10deg) translateY(10px);
+    transform: rotate(20deg) translate(-10px, -10px);
 }
 
-/* Controls panel */
-.controls-panel {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    height: 100%;
-}
-
-.controls-panel .primary-actions {
-    width: 100%;
-    margin-bottom: 0;
-}
 
 /* ── BOTTOM HUD BAR (player stats) ───────────────────────────── */
 
@@ -798,8 +1168,18 @@
     image-rendering: pixelated;
     border: 2px solid rgba(0, 0, 0, 0.3);
     box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.4);
-    animation: cardDeal 0.22s ease-out both;
+    animation: cardDeal var(--deal-duration, 0.24s) cubic-bezier(0.19, 0.84, 0.28, 1) both;
+    animation-delay: var(--deal-delay, 0s);
     flex-shrink: 0;
+    will-change: transform, opacity;
+}
+
+.playing-card-image.deal-owner-dealer {
+    transform-origin: 50% -24%;
+}
+
+.playing-card-image.deal-owner-player {
+    transform-origin: 50% 120%;
 }
 
 /* ── HUD PILLS (shared between dealer & player) ──────────────── */
@@ -988,23 +1368,31 @@
 /* ── ABILITY HUD ─────────────────────────────────────────────── */
 
 .ability-hud {
-    border: 2px solid rgba(124, 214, 255, 0.18);
-    background: rgba(0, 0, 0, 0.38);
+    border: 2px solid rgba(124, 214, 255, 0.2);
+    background: rgba(0, 0, 0, 0.58);
     border-radius: 3px;
-    padding: 6px 8px;
+    padding: 9px 10px;
     margin-bottom: 0;
+}
+
+.ability-hud.combo-ready {
+    border-color: rgba(255, 225, 112, 0.45);
+    box-shadow:
+        0 0 0 1px rgba(255, 225, 112, 0.12),
+        0 0 18px rgba(255, 225, 112, 0.14),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .ability-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 5px;
+    margin-bottom: 7px;
 }
 
 .ability-header h3 {
     font-family: "Press Start 2P", cursive;
-    font-size: 0.46rem;
+    font-size: 0.5rem;
     color: #7cd6ff;
     margin: 0;
     letter-spacing: 0.04em;
@@ -1012,30 +1400,73 @@
 
 .ability-used-note {
     color: #f5a623;
-    font-size: 0.55rem;
+    font-size: 0.65rem;
 }
 
 .ability-strip {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 4px;
+    gap: 6px;
+}
+
+.combo-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 225, 112, 0.28);
+    background:
+        linear-gradient(135deg, rgba(107, 64, 0, 0.72) 0%, rgba(57, 29, 0, 0.8) 100%);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+        0 0 12px rgba(255, 194, 74, 0.14);
+    animation: comboPulse 1.8s ease-in-out infinite;
+}
+
+.combo-display.combo-heavy {
+    border-color: rgba(255, 224, 112, 0.52);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+        0 0 16px rgba(255, 210, 74, 0.2);
+}
+
+.combo-label {
+    font-family: "Press Start 2P", cursive;
+    font-size: 0.34rem;
+    color: #ffe36f;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.combo-values {
+    font-family: "VT323", monospace;
+    font-size: 0.92rem;
+    color: #fff3bf;
+    line-height: 1.1;
 }
 
 .ability-chip {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     border-radius: 3px;
     border: 2px solid #284b5e;
     background: linear-gradient(135deg, #1a3545 0%, #0e2330 100%);
     color: #c9eeff;
-    padding: 5px 8px;
+    padding: 7px 9px;
     transition: transform 0.12s ease, border-color 0.12s ease;
     text-align: left;
     white-space: normal;
-    min-height: 38px;
+    min-height: 46px;
     cursor: pointer;
     box-shadow: 0 2px 0 #091520;
+}
+
+.ability-chip.ability-fx {
+    animation: abilityChipPulse 0.34s ease-out;
 }
 
 .ability-chip:disabled {
@@ -1066,7 +1497,7 @@
 
 .ability-name {
     font-family: "Press Start 2P", cursive;
-    font-size: 0.42rem;
+    font-size: 0.46rem;
     color: #7cd6ff;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -1077,8 +1508,8 @@
 
 .ability-desc {
     font-family: "VT323", monospace;
-    font-size: 0.82rem;
-    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.92rem;
+    color: rgba(255, 255, 255, 0.76);
     line-height: 1.2;
     display: none;
 }
@@ -1179,6 +1610,7 @@
     font-size: 0.52rem;
     margin: 0;
     color: #e8e0c0;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
 }
 
 .hp-badge {
@@ -1190,6 +1622,7 @@
     font-size: 0.44rem;
     font-weight: 700;
     box-shadow: 0 2px 0 #7a1010;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
 }
 
 .hp-badge.hp-critical {
@@ -1200,8 +1633,9 @@
 .host-tag {
     font-family: "VT323", monospace;
     font-size: 0.82rem;
-    color: #78a878;
+    color: #9dd69d;
     font-weight: 400;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
 }
 
 .player-hud-row {
@@ -1217,13 +1651,15 @@
     margin: 4px 0;
     color: #ffe36f;
     letter-spacing: 0.04em;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
 }
 
 .player-status-text {
     font-family: "VT323", monospace;
     font-size: 1rem;
     margin: 3px 0 2px;
-    color: #88cc88;
+    color: #b8e2b8;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
 }
 
 .card-row {
@@ -1240,38 +1676,88 @@
     font-size: 0.75rem;
 }
 
-/* ── BACK BUTTON ─────────────────────────────────────────────── */
+/* ── TOP-LEFT BURGER + ESC MENU ─────────────────────────────── */
 
-.back-nav-button {
-    font-family: "Press Start 2P", cursive;
-    font-size: 0.48rem;
-    min-width: 70px;
-    min-height: 30px;
+.menu-burger-button {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1200;
+    width: 40px;
+    height: 34px;
     border-radius: 3px;
     border: 2px solid #2f2a1a;
     background: linear-gradient(180deg, #e8e0c6 0%, #c9bd95 100%);
-    color: #2e250f;
     box-shadow: 0 3px 0 #7a6e40;
     cursor: pointer;
-    transition: transform 0.1s ease;
-    letter-spacing: 0.04em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0;
 }
 
-.back-nav-floating {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    z-index: 1200;
+.menu-burger-button span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: #2e250f;
 }
 
-.back-nav-button:hover {
+.menu-burger-button:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 0 #7a6e40;
 }
 
-.back-nav-button:active {
+.menu-burger-button:active {
     transform: translateY(1px);
     box-shadow: 0 2px 0 #7a6e40;
+}
+
+.menu-burger-button[aria-expanded="true"] {
+    filter: brightness(1.08);
+}
+
+.esc-menu-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.84);
+}
+
+.esc-menu-overlay[hidden] {
+    display: none !important;
+}
+
+.esc-menu-card {
+    width: min(92vw, 420px);
+    padding: 20px 18px;
+    text-align: center;
+}
+
+.esc-menu-card h2 {
+    margin: 8px 0 16px;
+    font-family: "Press Start 2P", cursive;
+    font-size: 0.88rem;
+    color: #ffe36f;
+    line-height: 1.4;
+}
+
+.esc-menu-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.esc-menu-actions button,
+.esc-menu-actions .button-link {
+    width: 100%;
+    justify-content: center;
+    min-height: 42px;
 }
 
 /* ── PIXEL PANEL (for modals & match over) ───────────────────── */
@@ -1333,20 +1819,69 @@
     75% { transform: translate(-2px, 1px) rotate(0deg); }
 }
 
+@keyframes screenShakeLight {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    20% { transform: translate(-4px, -2px) rotate(-0.2deg); }
+    45% { transform: translate(3px, 2px) rotate(0.2deg); }
+    70% { transform: translate(-2px, 1px) rotate(-0.1deg); }
+}
+
+@keyframes screenShakeHeavy {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    12% { transform: translate(-9px, -5px) rotate(-0.7deg); }
+    26% { transform: translate(8px, 4px) rotate(0.6deg); }
+    40% { transform: translate(-7px, 3px) rotate(-0.5deg); }
+    58% { transform: translate(6px, -3px) rotate(0.4deg); }
+    74% { transform: translate(-4px, 2px) rotate(-0.2deg); }
+}
+
+@keyframes impactBurst {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.22);
+        filter: brightness(1.8);
+    }
+    30% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.12);
+        filter: brightness(1.35);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.48);
+        filter: brightness(0.95);
+    }
+}
+
+@keyframes dealerCardsRattle {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-6px) rotate(-1.2deg); }
+    55% { transform: translateX(5px) rotate(1deg); }
+    100% { transform: translateX(0); }
+}
+
+@keyframes playerArmRecoil {
+    0% { transform: translateY(0); filter: brightness(1); }
+    35% { transform: translateY(9px) scale(0.97); filter: brightness(1.25); }
+    100% { transform: translateY(0); filter: brightness(1); }
+}
+
 /* Player LEFT arm smacks forward (toward dealer) */
 @keyframes playerSmackLeft {
-    0% { transform: rotate(-10deg) translateY(10px); }
-    25% { transform: rotate(-38deg) translateY(-72px) scale(1.08); }
-    55% { transform: rotate(-32deg) translateY(-58px) scale(1.04); }
-    100% { transform: rotate(-10deg) translateY(10px); }
+    0% { transform: rotate(-20deg) translate(10px, -10px) scale(1); }
+    12% { transform: rotate(-12deg) translate(4px, -2px) scale(0.98); }
+    35% { transform: rotate(-52deg) translate(18px, -92px) scale(1.12); }
+    58% { transform: rotate(-43deg) translate(14px, -70px) scale(1.07); }
+    100% { transform: rotate(-20deg) translate(10px, -10px) scale(1); }
 }
 
 /* Player RIGHT arm smacks forward */
 @keyframes playerSmackRight {
-    0% { transform: rotate(10deg) translateY(10px); }
-    25% { transform: rotate(38deg) translateY(-72px) scale(1.08); }
-    55% { transform: rotate(32deg) translateY(-58px) scale(1.04); }
-    100% { transform: rotate(10deg) translateY(10px); }
+    0% { transform: rotate(20deg) translate(-10px, -10px) scale(1); }
+    12% { transform: rotate(12deg) translate(-4px, -2px) scale(0.98); }
+    35% { transform: rotate(52deg) translate(-18px, -92px) scale(1.12); }
+    58% { transform: rotate(43deg) translate(-14px, -70px) scale(1.07); }
+    100% { transform: rotate(20deg) translate(-10px, -10px) scale(1); }
 }
 
 /* Dealer arm smacks downward toward player */
@@ -1373,6 +1908,67 @@
     80% { transform: translateX(3px) rotate(0.5deg); }
 }
 
+@keyframes dealerIdle {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(calc(var(--dealer-idle-y) * -1)) rotate(calc(var(--dealer-idle-rot) * -1)); }
+    55% { transform: translateY(0) rotate(0deg); }
+    78% { transform: translateY(var(--dealer-idle-y)) rotate(var(--dealer-idle-rot)); }
+}
+
+@keyframes dealerFeint {
+    0%, 86%, 100% { transform: translateY(0) rotate(0deg); }
+    90% { transform: translateY(-1px) rotate(-0.8deg); }
+    93% { transform: translateY(0) rotate(0deg); }
+    96% { transform: translateY(-2px) rotate(1deg); }
+}
+
+@keyframes ambientDrift {
+    0%, 100% {
+        transform: translate3d(0, 0, 0) scale(1);
+        filter: blur(0px);
+    }
+    35% {
+        transform: translate3d(-1.2%, 0.6%, 0) scale(1.01);
+    }
+    70% {
+        transform: translate3d(1%, -0.6%, 0) scale(1.015);
+    }
+}
+
+@keyframes dealerGlowPulse {
+    0%, 100% { opacity: 0.72; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.02); }
+}
+
+@keyframes comboPulse {
+    0%, 100% {
+        transform: translateY(0);
+        filter: brightness(1);
+    }
+    50% {
+        transform: translateY(-1px);
+        filter: brightness(1.08);
+    }
+}
+
+@keyframes abilityChipPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 2px 0 #091520;
+    }
+    45% {
+        transform: scale(1.04);
+        box-shadow:
+            0 0 0 1px rgba(255, 225, 112, 0.2),
+            0 0 14px rgba(255, 225, 112, 0.18),
+            0 2px 0 #091520;
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 2px 0 #091520;
+    }
+}
+
 /* Dealer defeated flash */
 @keyframes dealerDefeat {
     0%, 100% { filter: none; }
@@ -1385,7 +1981,11 @@
 @keyframes cardDeal {
     from {
         opacity: 0;
-        transform: translateY(-18px) rotate(-6deg) scale(0.75);
+        transform: translateY(-30px) translateX(var(--deal-x, 0px)) rotate(var(--deal-rot, -8deg)) scale(0.72);
+    }
+    70% {
+        opacity: 1;
+        transform: translateY(3px) translateX(calc(var(--deal-x, 0px) * 0.2)) rotate(calc(var(--deal-rot, -8deg) * 0.28)) scale(1.02);
     }
     to {
         opacity: 1;
@@ -1402,11 +2002,17 @@
 
 /* Animation classes applied by JS */
 .player-arm-left.smacking {
-    animation: playerSmackLeft 0.52s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    animation: playerSmackLeft 0.44s cubic-bezier(0.18, 0.75, 0.24, 1) forwards;
+    filter: drop-shadow(0 0 8px rgba(255, 210, 120, 0.35));
 }
 
 .player-arm-right.smacking {
-    animation: playerSmackRight 0.52s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    animation: playerSmackRight 0.44s cubic-bezier(0.18, 0.75, 0.24, 1) forwards;
+    filter: drop-shadow(0 0 8px rgba(255, 210, 120, 0.35));
+}
+
+.player-arm.recoil-hit {
+    animation: playerArmRecoil 0.26s ease-out;
 }
 
 .dealer-arm-left.smacking {
@@ -1428,8 +2034,14 @@
 /* ── RESPONSIVE ADJUSTMENTS ──────────────────────────────────── */
 
 @media (max-width: 820px) {
-    .player-pov-row {
-        grid-template-columns: minmax(140px, 160px) 1fr minmax(140px, 160px);
+    .actions-center-bar .primary-actions {
+        gap: 6px;
+    }
+
+    .action-big {
+        min-height: 44px;
+        font-size: 0.52rem;
+        padding: 6px 8px;
     }
 
     .player-arm {
@@ -1447,32 +2059,63 @@
         height: 46px;
     }
 
+    .player-arm-gap {
+        flex-basis: clamp(36px, 9vw, 84px);
+    }
+
+    .player-arm-left {
+        transform: rotate(-17deg) translate(6px, -4px);
+    }
+
+    .player-arm-right {
+        transform: rotate(17deg) translate(-6px, -4px);
+    }
+
     .dealer-section {
-        min-height: 130px;
+        min-height: 150px;
+    }
+
+    .dealer-arena {
+        gap: 16px;
+    }
+
+    .dealer-character-wrap {
+        transform: translateY(10px) scale(1.12);
+    }
+
+    .dealer-cards-zone {
+        min-width: 160px;
+    }
+
+    .abilities-panel-floating {
+        width: min(88vw, 360px);
+        right: 8px;
+        bottom: 56px;
     }
 
     .hud-mode-label {
         display: none;
     }
-
-    .abilities-panel {
-        display: none;
-    }
-
-    .player-pov-row {
-        grid-template-columns: 1fr minmax(140px, 160px);
-    }
 }
 
 @media (max-height: 650px) {
     .dealer-section {
-        min-height: 120px;
-        max-height: 160px;
+        min-height: 130px;
+        max-height: 190px;
+    }
+
+    .dealer-character-wrap {
+        transform: translateY(7px) scale(1.04);
     }
 
     .player-pov-row {
         min-height: 110px;
         max-height: 130px;
+    }
+
+    .abilities-panel-floating {
+        bottom: 48px;
+        max-height: min(38vh, 300px);
     }
 
     .game-viewport {

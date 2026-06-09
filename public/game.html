@@ -19,8 +19,14 @@
     <!-- Hit flash: red flash when player is struck -->
     <div id="hitFlash" class="hit-flash" aria-hidden="true"></div>
 
-    <!-- Fixed back button -->
-    <button id="backToMenuButton" type="button" class="back-nav-button back-nav-floating">◀ Back</button>
+    <!-- Impact bursts for punch readability -->
+    <div id="dealerImpact" class="impact-burst dealer-impact" aria-hidden="true"></div>
+    <div id="playerImpact" class="impact-burst player-impact" aria-hidden="true"></div>
+
+    <!-- Top-left burger button opens in-game ESC menu -->
+    <button id="menuBurgerButton" type="button" class="menu-burger-button" aria-label="Open settings menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+    </button>
 
     <!-- ═══════════════════════════════════════════════════════════
          GAME VIEWPORT — full screen, no scroll
@@ -96,37 +102,35 @@
                 <div id="players" class="players-pov-grid"></div>
             </div>
 
-            <!-- First-person arms row with abilities and action buttons flanking -->
-            <div class="player-pov-row">
-
-                <!-- LEFT: Ability HUD -->
-                <div class="abilities-panel">
-                    <div class="ability-hud">
-                        <div class="ability-header">
-                            <h3>Abilities</h3>
-                            <span id="abilityUsedNote" class="ability-used-note subtle small" hidden>1 per hand</span>
-                        </div>
-                        <div id="abilityControls" class="ability-strip"></div>
-                    </div>
+            <!-- Action buttons bar (centered beneath player cards) -->
+            <div class="actions-center-bar">
+                <div id="primaryActions" class="primary-actions">
+                    <button id="hitButton" class="action-big">Hit</button>
+                    <button id="standButton" class="action-big">Stand</button>
+                    <button id="doubleButton" class="action-big">Double</button>
+                    <button id="splitButton" class="action-big" hidden>Split</button>
                 </div>
+            </div>
 
-                <!-- CENTER: Player first-person arms -->
+            <!-- First-person arms row -->
+            <div class="player-pov-row">
                 <div class="player-arms-pov">
                     <div class="player-arm player-arm-left" id="playerArmLeft"></div>
                     <div class="player-arm-gap"></div>
                     <div class="player-arm player-arm-right" id="playerArmRight"></div>
                 </div>
+            </div>
 
-                <!-- RIGHT: Action buttons -->
-                <div class="controls-panel">
-                    <div id="primaryActions" class="primary-actions">
-                        <button id="hitButton" class="action-big">Hit</button>
-                        <button id="standButton" class="action-big">Stand</button>
-                        <button id="doubleButton" class="action-big">Double</button>
-                        <button id="splitButton" class="action-big" hidden>Split</button>
+            <!-- Floating ability HUD (bottom-right) -->
+            <div class="abilities-panel abilities-panel-floating">
+                <div class="ability-hud">
+                    <div class="ability-header">
+                        <h3>Abilities</h3>
+                        <span id="abilityUsedNote" class="ability-used-note subtle small" hidden>1 per hand</span>
                     </div>
+                    <div id="comboDisplay" class="combo-display" hidden></div>
+                    <div id="abilityControls" class="ability-strip"></div>
                 </div>
-
             </div>
         </section>
 
@@ -230,6 +234,19 @@
 
             <div class="upgrade-options" id="blessingOptions">
                 <!-- Populated dynamically from state.blessings -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ESC / burger menu overlay -->
+    <div id="escMenuOverlay" class="esc-menu-overlay" hidden>
+        <div class="esc-menu-card pixel-panel" role="dialog" aria-modal="true" aria-labelledby="escMenuTitle">
+            <p class="eyebrow">Paused</p>
+            <h2 id="escMenuTitle">Game Menu</h2>
+            <div class="esc-menu-actions">
+                <button id="escResumeButton" type="button">Resume</button>
+                <a id="escSettingsLink" class="button-link" href="options.html">Settings</a>
+                <button id="escExitButton" type="button">Exit To Menu</button>
             </div>
         </div>
     </div>

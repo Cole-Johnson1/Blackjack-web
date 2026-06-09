@@ -25,64 +25,82 @@ const BASE_PLAYER = {
     maxMana: 6
 };
 
+const BLESSING_OPTION_COUNT = 3;
+
 const ABILITIES = {
     arcaneDraw: {
         id: "arcaneDraw",
         name: "Arcane Draw",
+        type: "active",
         manaCost: 3,
         description: "Turn your lowest non-Ace card into an Ace (first action only)."
     },
     mendWounds: {
         id: "mendWounds",
         name: "Mend Wounds",
+        type: "active",
         manaCost: 4,
         description: "Heal 10 HP."
     },
     emberStrike: {
         id: "emberStrike",
         name: "Ember Strike",
+        type: "active",
         manaCost: 5,
         description: "Deal 2× your Attack to the dealer if you win this hand."
     },
     manaSurge: {
         id: "manaSurge",
         name: "Mana Surge",
+        type: "active",
         manaCost: 0,
         description: "Gain 2 Mana instantly."
+    },
+    siphonStrike: {
+        id: "siphonStrike",
+        name: "Siphon Strike",
+        type: "active",
+        manaCost: 3,
+        description: "Gain +6 Shield now. If you win, heal 6 and deal bonus damage."
+    },
+    focusSigil: {
+        id: "focusSigil",
+        name: "Focus Sigil",
+        type: "active",
+        manaCost: 2,
+        description: "Empower this hand with extra combo damage if you win."
+    },
+    battleTrance: {
+        id: "battleTrance",
+        name: "Battle Trance",
+        type: "passive",
+        manaCost: 0,
+        description: "Passive: using active abilities builds Trance stacks (+20% win damage each)."
+    },
+    overcharge: {
+        id: "overcharge",
+        name: "Overcharge",
+        type: "passive",
+        manaCost: 0,
+        description: "Passive: +2 damage per mana spent this hand; Mana Surge adds extra burst."
+    },
+    executionerInstinct: {
+        id: "executionerInstinct",
+        name: "Executioner Instinct",
+        type: "passive",
+        manaCost: 0,
+        description: "Passive: winning hands of 19+ deal heavy bonus damage."
+    },
+    splitTorrent: {
+        id: "splitTorrent",
+        name: "Split Torrent",
+        type: "passive",
+        manaCost: 0,
+        description: "Passive: split-hand wins unleash extra combo strikes."
     }
 };
 
-const BLESSINGS = {
-    vitalityCore: {
-        id: "vitalityCore",
-        name: "Vitality Core",
-        description: "+30 Max HP and fully heal.",
-        apply: run => {
-            run.maxHealth += 30;
-            run.health = run.maxHealth;
-        }
-    },
-    arcaneBattery: {
-        id: "arcaneBattery",
-        name: "Arcane Battery",
-        description: "+8 Max Mana, restore all Mana, and +6 Attack.",
-        apply: run => {
-            run.maxMana += 8;
-            run.mana = run.maxMana;
-            run.attackDamage += 6;
-        }
-    },
-    warEdge: {
-        id: "warEdge",
-        name: "War Edge",
-        description: "+14 Attack Damage and +10 Max HP.",
-        apply: run => {
-            run.attackDamage += 14;
-            run.maxHealth += 10;
-            run.health = Math.min(run.maxHealth, run.health + 10);
-        }
-    }
-};
+const BLESSINGS = {};
 
 const app = express();
 const server = http.createServer(app);
@@ -541,7 +559,14 @@ function makePlayerRunState() {
         tempShield: 0,
         usedManaSurge: false,
         usedAbilityThisHand: false,
+        usedArcaneDrawThisHand: false,
+        manaSpentThisHand: 0,
         emberStrikeActive: false,
+        siphonStrikeActive: false,
+        focusSigilActive: false,
+        tranceStacks: 0,
+        unlockedAbilities: [],
+        pendingBlessingOptions: [],
         health: BASE_PLAYER.health,
         maxHealth: BASE_PLAYER.health,
         attackDamage: BASE_PLAYER.attackDamage,
@@ -566,8 +591,66 @@ function sanitizeSavedPlayerRun(rawRun) {
         hand: Array.isArray(candidate.hand) ? candidate.hand : [],
         resolvedHands: Array.isArray(candidate.resolvedHands) ? candidate.resolvedHands : [],
         pendingSplitHands: Array.isArray(candidate.pendingSplitHands) ? candidate.pendingSplitHands : [],
+        unlockedAbilities: Array.isArray(candidate.unlockedAbilities)
+            ? candidate.unlockedAbilities.filter(id => ABILITIES[id])
+            : [],
+        pendingBlessingOptions: Array.isArray(candidate.pendingBlessingOptions)
+            ? candidate.pendingBlessingOptions.filter(option => option && ABILITIES[option.id])
+            : [],
         levelChoiceTimeout: null
     };
+}
+
+function runHasAbility(run, abilityId) {
+    return Array.isArray(run.unlockedAbilities) && run.unlockedAbilities.includes(abilityId);
+}
+
+function pickRandom(array, count) {
+    const clone = [...array];
+
+    for (let i = clone.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [clone[i], clone[j]] = [clone[j], clone[i]];
+    }
+
+    return clone.slice(0, Math.max(0, Math.min(count, clone.length)));
+}
+
+function buildBlessingOptionsForRun(run) {
+    const allAbilities = Object.values(ABILITIES);
+    const lockedAbilities = allAbilities.filter(ability => !runHasAbility(run, ability.id));
+    const pool = lockedAbilities.length > 0 ? lockedAbilities : allAbilities;
+
+    return pickRandom(pool, BLESSING_OPTION_COUNT).map(ability => ({
+        id: ability.id,
+        name: ability.name,
+        description: lockedAbilities.length > 0
+            ? `Unlock ${ability.type}: ${ability.description}`
+            : `Mastery for ${ability.name}: +2 Attack and +2 Max Mana.`
+    }));
+}
+
+function ensureBlessingOptions(run) {
+    if (run.pendingBlessingChoices <= 0) {
+        run.pendingBlessingOptions = [];
+        return;
+    }
+
+    if (!Array.isArray(run.pendingBlessingOptions) || run.pendingBlessingOptions.length === 0) {
+        run.pendingBlessingOptions = buildBlessingOptionsForRun(run);
+    }
+}
+
+function applyBlessingChoice(run, abilityId) {
+    if (!runHasAbility(run, abilityId)) {
+        run.unlockedAbilities.push(abilityId);
+        return;
+    }
+
+    // If everything is unlocked, repeated picks become mastery bonuses.
+    run.attackDamage += 2;
+    run.maxMana += 2;
+    run.mana = Math.min(run.maxMana, run.mana + 2);
 }
 
 function sanitizeSavedGame(rawGame) {
@@ -743,6 +826,10 @@ function getPublicPlayer(player) {
             xpToNext: run.xpToNext,
             pendingStatChoices: run.pendingStatChoices,
             pendingBlessingChoices: run.pendingBlessingChoices,
+            pendingBlessingOptions: Array.isArray(run.pendingBlessingOptions)
+                ? run.pendingBlessingOptions.map(option => ({ ...option }))
+                : [],
+            unlockedAbilities: Array.isArray(run.unlockedAbilities) ? [...run.unlockedAbilities] : [],
             alive: run.alive,
             emberStrikeActive: run.emberStrikeActive || false
         }
@@ -793,11 +880,7 @@ function getPublicGameState(room, revealDealer = false) {
         lastRoundSummary: room.game.lastRoundSummary,
         runResult: room.game.runResult,
         abilities: Object.values(ABILITIES),
-        blessings: Object.values(BLESSINGS).map(b => ({
-            id: b.id,
-            name: b.name,
-            description: b.description
-        }))
+        blessings: []
     };
 }
 
@@ -1099,6 +1182,54 @@ function getSettledHands(player) {
     }];
 }
 
+function resolvePlayerRoundOutcome(player, dealerHand, dealerAttackDamage) {
+    const settledHands = getSettledHands(player);
+    const dealerScore = getHandValue(dealerHand);
+    const dealerBusted = dealerScore > 21;
+
+    const handOutcomes = settledHands.map(handState => {
+        const handScore = getHandValue(handState.cards);
+        let handResult = "push";
+
+        if (handState.busted) {
+            handResult = "loss";
+        }
+        else if (isBlackjack(handState.cards) && !isBlackjack(dealerHand)) {
+            handResult = "blackjack";
+        }
+        else if (dealerBusted || handScore > dealerScore) {
+            handResult = "win";
+        }
+        else if (handScore < dealerScore) {
+            handResult = "loss";
+        }
+
+        return {
+            result: handResult,
+            score: handScore,
+            multiplier: handState.multiplier || 1
+        };
+    });
+
+    const winHands = handOutcomes.filter(x => x.result === "win" || x.result === "blackjack");
+    const lossHands = handOutcomes.filter(x => x.result === "loss");
+    const blackjackHands = handOutcomes.filter(x => x.result === "blackjack");
+    const combo = winHands.length > 0 ? calculateComboDamage(player, winHands) : { totalDamage: 0, heal: 0 };
+
+    return {
+        handOutcomes,
+        winHands,
+        lossHands,
+        blackjackHands,
+        dealerDamage: combo.totalDamage,
+        heal: combo.heal,
+        playerDamage: lossHands.length > 0 && lossHands.length === handOutcomes.length
+            ? Math.max(1, dealerAttackDamage - player.run.tempShield)
+            : 0,
+        dealerScore
+    };
+}
+
 function drawCard(room) {
     if (room.game.deck.length === 0) {
         room.game.deck = createDeck();
@@ -1135,6 +1266,14 @@ function applyAbility(player, room, abilityId) {
         return { ok: false, error: "Unknown ability." };
     }
 
+    if (!runHasAbility(player.run, ability.id)) {
+        return { ok: false, error: "You have not unlocked that ability yet." };
+    }
+
+    if (ability.type !== "active") {
+        return { ok: false, error: "Passive abilities activate automatically." };
+    }
+
     // Only one ability may be used per hand.
     if (player.run.usedAbilityThisHand) {
         return { ok: false, error: "You can only use one ability per hand." };
@@ -1150,6 +1289,7 @@ function applyAbility(player, room, abilityId) {
 
     player.run.mana -= ability.manaCost;
     player.run.usedAbilityThisHand = true;
+    player.run.manaSpentThisHand += ability.manaCost;
 
     if (ability.id === "arcaneDraw") {
         // Replace the lowest non-Ace card with an Ace.
@@ -1171,6 +1311,7 @@ function applyAbility(player, room, abilityId) {
         }, nonAces[0]);
 
         player.run.hand[lowest.index] = { value: "A", suit: lowest.card.suit };
+        player.run.usedArcaneDrawThisHand = true;
 
         // Recheck bust status.
         if (getHandValue(player.run.hand) > 21) {
@@ -1192,11 +1333,79 @@ function applyAbility(player, room, abilityId) {
 
     if (ability.id === "manaSurge") {
         player.run.mana = Math.min(player.run.maxMana, player.run.mana + 2);
+        player.run.usedManaSurge = true;
+    }
+
+    if (ability.id === "siphonStrike") {
+        player.run.tempShield += 6;
+        player.run.siphonStrikeActive = true;
+    }
+
+    if (ability.id === "focusSigil") {
+        player.run.focusSigilActive = true;
+    }
+
+    if (runHasAbility(player.run, "battleTrance")) {
+        player.run.tranceStacks = Math.min(4, (player.run.tranceStacks || 0) + 1);
     }
 
     player.run.handActionCount += 1;
 
     return { ok: true };
+}
+
+function calculateComboDamage(player, winHands) {
+    const run = player.run;
+    const settledHands = getSettledHands(player);
+    let multiplier = run.emberStrikeActive ? 2 : 1;
+    let flatBonus = 0;
+    let heal = 0;
+
+    if (runHasAbility(run, "battleTrance")) {
+        multiplier += Math.min(0.8, (run.tranceStacks || 0) * 0.2);
+    }
+
+    if (run.focusSigilActive) {
+        multiplier += 0.5;
+
+        if (run.emberStrikeActive) {
+            multiplier += 0.5;
+        }
+    }
+
+    if (runHasAbility(run, "overcharge")) {
+        flatBonus += Math.max(0, run.manaSpentThisHand || 0) * 2;
+
+        if (run.usedManaSurge) {
+            flatBonus += 4;
+        }
+    }
+
+    if (runHasAbility(run, "executionerInstinct")) {
+        winHands.forEach(hand => {
+            if ((hand.score || 0) >= 19) {
+                flatBonus += run.usedArcaneDrawThisHand ? 10 : 6;
+            }
+        });
+    }
+
+    if (runHasAbility(run, "splitTorrent") && settledHands.length > 1 && winHands.length > 0) {
+        flatBonus += 8 * winHands.length;
+
+        if (run.emberStrikeActive) {
+            flatBonus += 4 * winHands.length;
+        }
+    }
+
+    if (run.siphonStrikeActive) {
+        flatBonus += 4 * winHands.length;
+        heal += 6;
+    }
+
+    const baseDamage = winHands.reduce((sum, hand) => sum + (run.attackDamage * hand.multiplier), 0);
+    const totalDamage = Math.max(1, Math.round(baseDamage * multiplier) + flatBonus);
+
+    return { totalDamage, heal };
 }
 
 function clearAutoNextTimeout(room) {
@@ -1350,6 +1559,11 @@ function startRoundInternal(room, socket = null) {
         player.run.splitActive = false;
         player.run.tempShield = 0;
         player.run.usedManaSurge = false;
+        player.run.usedArcaneDrawThisHand = false;
+        player.run.manaSpentThisHand = 0;
+        player.run.emberStrikeActive = false;
+        player.run.siphonStrikeActive = false;
+        player.run.focusSigilActive = false;
         player.run.mana = Math.min(player.run.maxMana, player.run.mana + 2);
         room.game.turnOrder.push(player.id);
     });
@@ -1437,6 +1651,8 @@ function resolvePostRoundState(room) {
         .map(id => players[id])
         .filter(player => player && player.run.alive);
 
+    alive.forEach(player => ensureBlessingOptions(player.run));
+
     if (alive.length === 0) {
         updateRunOver(room, "All players were defeated.");
         return;
@@ -1488,42 +1704,13 @@ function settleRound(room) {
     let losses = 0;
     const results = [];
 
-    // Reset per-hand ability state for each player before settling.
     activePlayers.forEach(player => {
-        if (!player.run.usedAbilityThisHand) {
-            player.run.emberStrikeActive = false;
-        }
-    });
-
-    activePlayers.forEach(player => {
-        const settledHands = getSettledHands(player);
-        const handOutcomes = settledHands.map(handState => {
-            const handScore = getHandValue(handState.cards);
-            let handResult = "push";
-
-            if (handState.busted) {
-                handResult = "loss";
-            }
-            else if (isBlackjack(handState.cards) && !isBlackjack(room.game.dealer.hand)) {
-                handResult = "blackjack";
-            }
-            else if (room.game.dealer.busted || handScore > dealerScore) {
-                handResult = "win";
-            }
-            else if (handScore < dealerScore) {
-                handResult = "loss";
-            }
-
-            return {
-                result: handResult,
-                score: handScore,
-                multiplier: handState.multiplier || 1
-            };
-        });
-
-        const winHands = handOutcomes.filter(x => x.result === "win" || x.result === "blackjack");
-        const lossHands = handOutcomes.filter(x => x.result === "loss");
-        const blackjackHands = handOutcomes.filter(x => x.result === "blackjack");
+        const roundOutcome = resolvePlayerRoundOutcome(
+            player,
+            room.game.dealer.hand,
+            room.game.dealer.attackDamage
+        );
+        const { handOutcomes, winHands, lossHands, blackjackHands } = roundOutcome;
 
         let result = "push";
         let score = handOutcomes.length > 0 ? Math.max(...handOutcomes.map(x => x.score)) : 0;
@@ -1531,22 +1718,32 @@ function settleRound(room) {
         if (winHands.length > 0) {
             result = blackjackHands.length > 0 ? "blackjack" : "win";
             wins += 1;
-            const emberBonus = player.run.emberStrikeActive ? 2 : 1;
-            const totalDamage = winHands.reduce((sum, x) => sum + (player.run.attackDamage * x.multiplier * emberBonus), 0);
-            room.game.dealer.health = Math.max(0, room.game.dealer.health - totalDamage);
+            room.game.dealer.health = Math.max(0, room.game.dealer.health - roundOutcome.dealerDamage);
+            if (roundOutcome.heal > 0) {
+                player.run.health = Math.min(player.run.maxHealth, player.run.health + roundOutcome.heal);
+            }
             grantXp(player, 5);
         }
         else if (lossHands.length === handOutcomes.length) {
             result = "loss";
             losses += 1;
-            const incoming = Math.max(1, room.game.dealer.attackDamage - player.run.tempShield);
-            player.run.health = Math.max(0, player.run.health - incoming);
+            player.run.health = Math.max(0, player.run.health - roundOutcome.playerDamage);
             player.run.alive = player.run.health > 0;
         }
 
         // Reset per-hand ability flags after settlement.
         player.run.usedAbilityThisHand = false;
+        player.run.usedArcaneDrawThisHand = false;
+        player.run.usedManaSurge = false;
+        player.run.manaSpentThisHand = 0;
         player.run.emberStrikeActive = false;
+        player.run.siphonStrikeActive = false;
+        player.run.focusSigilActive = false;
+        player.run.tempShield = 0;
+
+        if (player.run.tranceStacks > 0) {
+            player.run.tranceStacks -= 1;
+        }
 
         results.push({
             name: player.name,
@@ -1587,6 +1784,7 @@ function settleRound(room) {
             if (player.run.alive) {
                 // Big upgrade whenever dealer HP is fully depleted.
                 player.run.pendingBlessingChoices += 1;
+                ensureBlessingOptions(player.run);
             }
         });
     }
@@ -1600,6 +1798,7 @@ function settleRound(room) {
 
             if (player && player.run.alive) {
                 player.run.pendingBlessingChoices += 1;
+                ensureBlessingOptions(player.run);
             }
         });
 
@@ -2582,15 +2781,21 @@ io.on("connection", socket => {
             return;
         }
 
-        const blessing = BLESSINGS[String(blessingId || "")];
+        const selectedId = String(blessingId || "");
+        const options = Array.isArray(player.run.pendingBlessingOptions)
+            ? player.run.pendingBlessingOptions
+            : [];
+        const selected = options.find(option => option && option.id === selectedId);
 
-        if (!blessing) {
+        if (!selected || !ABILITIES[selectedId]) {
             socket.emit("errorMessage", "Unknown blessing.");
             return;
         }
 
-        blessing.apply(player.run);
+        applyBlessingChoice(player.run, selectedId);
         player.run.pendingBlessingChoices -= 1;
+        player.run.pendingBlessingOptions = [];
+        ensureBlessingOptions(player.run);
 
         resolvePostRoundState(room);
         emitRoomState(room);
@@ -2647,6 +2852,7 @@ module.exports = {
         calculateXpToNext,
         grantXp,
         applyLevelUpStat,
+        resolvePlayerRoundOutcome,
         getCardValue,
         getHandValue,
         isBlackjack
