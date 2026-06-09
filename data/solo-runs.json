@@ -1314,5 +1314,663 @@
       "alive": true,
       "levelChoiceTimeout": null
     }
+  },
+  "Pphaseamq754wwty7hj": {
+    "updatedAt": 1781039841827,
+    "game": {
+      "runActive": true,
+      "phase": "round-over",
+      "chapter": 1,
+      "roundInChapter": 1,
+      "totalRoundsPlayed": 1,
+      "roundsLost": 0,
+      "dealerTier": 2,
+      "deck": [
+        {
+          "suit": "C",
+          "value": "9"
+        },
+        {
+          "suit": "S",
+          "value": "A"
+        },
+        {
+          "suit": "D",
+          "value": "8"
+        },
+        {
+          "suit": "C",
+          "value": "7"
+        },
+        {
+          "suit": "H",
+          "value": "Q"
+        },
+        {
+          "suit": "D",
+          "value": "2"
+        },
+        {
+          "suit": "D",
+          "value": "7"
+        },
+        {
+          "suit": "H",
+          "value": "10"
+        },
+        {
+          "suit": "C",
+          "value": "5"
+        },
+        {
+          "suit": "H",
+          "value": "4"
+        },
+        {
+          "suit": "C",
+          "value": "6"
+        },
+        {
+          "suit": "S",
+          "value": "10"
+        },
+        {
+          "suit": "H",
+          "value": "3"
+        },
+        {
+          "suit": "H",
+          "value": "7"
+        },
+        {
+          "suit": "C",
+          "value": "2"
+        },
+        {
+          "suit": "H",
+          "value": "9"
+        },
+        {
+          "suit": "D",
+          "value": "4"
+        },
+        {
+          "suit": "H",
+          "value": "2"
+        },
+        {
+          "suit": "D",
+          "value": "J"
+        },
+        {
+          "suit": "C",
+          "value": "4"
+        },
+        {
+          "suit": "D",
+          "value": "Q"
+        },
+        {
+          "suit": "D",
+          "value": "A"
+        },
+        {
+          "suit": "C",
+          "value": "Q"
+        },
+        {
+          "suit": "D",
+          "value": "10"
+        },
+        {
+          "suit": "S",
+          "value": "2"
+        },
+        {
+          "suit": "H",
+          "value": "K"
+        },
+        {
+          "suit": "C",
+          "value": "10"
+        },
+        {
+          "suit": "H",
+          "value": "8"
+        },
+        {
+          "suit": "C",
+          "value": "8"
+        },
+        {
+          "suit": "H",
+          "value": "5"
+        },
+        {
+          "suit": "C",
+          "value": "A"
+        },
+        {
+          "suit": "S",
+          "value": "Q"
+        },
+        {
+          "suit": "D",
+          "value": "9"
+        },
+        {
+          "suit": "C",
+          "value": "K"
+        },
+        {
+          "suit": "D",
+          "value": "3"
+        },
+        {
+          "suit": "D",
+          "value": "5"
+        },
+        {
+          "suit": "C",
+          "value": "J"
+        },
+        {
+          "suit": "C",
+          "value": "3"
+        },
+        {
+          "suit": "S",
+          "value": "K"
+        },
+        {
+          "suit": "S",
+          "value": "6"
+        },
+        {
+          "suit": "H",
+          "value": "J"
+        },
+        {
+          "suit": "S",
+          "value": "8"
+        },
+        {
+          "suit": "H",
+          "value": "A"
+        },
+        {
+          "suit": "S",
+          "value": "9"
+        },
+        {
+          "suit": "D",
+          "value": "6"
+        },
+        {
+          "suit": "S",
+          "value": "4"
+        },
+        {
+          "suit": "D",
+          "value": "K"
+        },
+        {
+          "suit": "S",
+          "value": "7"
+        }
+      ],
+      "dealer": {
+        "hand": [
+          {
+            "value": "10",
+            "suit": "S"
+          },
+          {
+            "value": "7",
+            "suit": "S"
+          }
+        ],
+        "busted": false,
+        "maxHealth": 24,
+        "health": 0,
+        "attackDamage": 0,
+        "isBoss": false,
+        "archetypeId": "crusher",
+        "name": "Dealer"
+      },
+      "roundBanner": {
+        "text": "You Win!",
+        "type": "win",
+        "until": 1781039843826
+      },
+      "autoNextTimeout": null,
+      "blackjackTimeout": null,
+      "turnTimeout": null,
+      "turnOrder": [
+        "BF_1ov12ADMqCRuuAAAB"
+      ],
+      "currentTurnIndex": 0,
+      "lastRoundSummary": {
+        "chapter": 1,
+        "roundInChapter": 1,
+        "roundsLost": 0,
+        "roundWon": true,
+        "roundDraw": false,
+        "dealerScore": 17,
+        "dealerHealthAfter": 0,
+        "results": [
+          {
+            "name": "Pphaseamq754wwty7hj",
+            "result": "win",
+            "score": 19,
+            "handCount": 1,
+            "hp": 30,
+            "attackDamage": 5,
+            "mana": 6
+          }
+        ],
+        "resolvedAt": 1781039841827,
+        "playerLost": false
+      },
+      "runResult": null,
+      "shopSeed": 0,
+      "dealerHoleRevealed": false
+    },
+    "playerRun": {
+      "hand": [
+        {
+          "value": "10",
+          "suit": "S"
+        },
+        {
+          "value": "9",
+          "suit": "S"
+        }
+      ],
+      "standing": true,
+      "busted": false,
+      "handMultiplier": 1,
+      "handActionCount": 0,
+      "resolvedHands": [],
+      "pendingSplitHands": [],
+      "splitActive": false,
+      "tempShield": 0,
+      "usedManaSurge": false,
+      "usedAbilityThisHand": false,
+      "usedArcaneDrawThisHand": false,
+      "manaSpentThisHand": 0,
+      "emberStrikeActive": false,
+      "siphonStrikeActive": false,
+      "focusSigilActive": false,
+      "tranceStacks": 0,
+      "unlockedAbilities": [],
+      "pendingBlessingOptions": [
+        {
+          "id": "overcharge",
+          "name": "Overcharge",
+          "description": "Unlock passive: Passive: +2 damage per mana spent this hand; Mana Surge adds extra burst."
+        },
+        {
+          "id": "countingCards",
+          "name": "Counting Cards",
+          "description": "Unlock active: Reveal the dealer's hidden card for this round."
+        },
+        {
+          "id": "evilBong",
+          "name": "Evil Bong",
+          "description": "Unlock active: Transmute the dealer's hidden card into a 4."
+        }
+      ],
+      "pendingShopChoices": 0,
+      "pendingShopOptions": [],
+      "relics": [],
+      "relicEffects": {
+        "openingAceForge": false,
+        "cardUpgradeCharges": 0
+      },
+      "health": 30,
+      "maxHealth": 30,
+      "attackDamage": 5,
+      "mana": 6,
+      "maxMana": 6,
+      "xp": 5,
+      "level": 1,
+      "xpToNext": 10,
+      "handsPlayed": 1,
+      "pendingStatChoices": 0,
+      "pendingBlessingChoices": 1,
+      "alive": true,
+      "levelChoiceTimeout": null
+    }
+  },
+  "Pphasebmq754x7sg71c": {
+    "updatedAt": 1781039842194,
+    "game": {
+      "runActive": true,
+      "phase": "shop-choice",
+      "chapter": 1,
+      "roundInChapter": 1,
+      "totalRoundsPlayed": 1,
+      "roundsLost": 0,
+      "dealerTier": 6,
+      "deck": [
+        {
+          "suit": "C",
+          "value": "Q"
+        },
+        {
+          "suit": "C",
+          "value": "K"
+        },
+        {
+          "suit": "D",
+          "value": "5"
+        },
+        {
+          "suit": "S",
+          "value": "9"
+        },
+        {
+          "suit": "C",
+          "value": "10"
+        },
+        {
+          "suit": "C",
+          "value": "4"
+        },
+        {
+          "suit": "H",
+          "value": "5"
+        },
+        {
+          "suit": "S",
+          "value": "3"
+        },
+        {
+          "suit": "H",
+          "value": "4"
+        },
+        {
+          "suit": "H",
+          "value": "K"
+        },
+        {
+          "suit": "D",
+          "value": "J"
+        },
+        {
+          "suit": "H",
+          "value": "J"
+        },
+        {
+          "suit": "C",
+          "value": "6"
+        },
+        {
+          "suit": "H",
+          "value": "9"
+        },
+        {
+          "suit": "C",
+          "value": "9"
+        },
+        {
+          "suit": "S",
+          "value": "6"
+        },
+        {
+          "suit": "C",
+          "value": "8"
+        },
+        {
+          "suit": "H",
+          "value": "7"
+        },
+        {
+          "suit": "S",
+          "value": "10"
+        },
+        {
+          "suit": "D",
+          "value": "8"
+        },
+        {
+          "suit": "S",
+          "value": "4"
+        },
+        {
+          "suit": "C",
+          "value": "5"
+        },
+        {
+          "suit": "H",
+          "value": "3"
+        },
+        {
+          "suit": "H",
+          "value": "2"
+        },
+        {
+          "suit": "S",
+          "value": "2"
+        },
+        {
+          "suit": "C",
+          "value": "A"
+        },
+        {
+          "suit": "D",
+          "value": "10"
+        },
+        {
+          "suit": "S",
+          "value": "7"
+        },
+        {
+          "suit": "S",
+          "value": "K"
+        },
+        {
+          "suit": "H",
+          "value": "6"
+        },
+        {
+          "suit": "C",
+          "value": "3"
+        },
+        {
+          "suit": "S",
+          "value": "A"
+        },
+        {
+          "suit": "D",
+          "value": "7"
+        },
+        {
+          "suit": "D",
+          "value": "9"
+        },
+        {
+          "suit": "S",
+          "value": "J"
+        },
+        {
+          "suit": "H",
+          "value": "10"
+        },
+        {
+          "suit": "D",
+          "value": "Q"
+        },
+        {
+          "suit": "C",
+          "value": "7"
+        },
+        {
+          "suit": "D",
+          "value": "4"
+        },
+        {
+          "suit": "C",
+          "value": "2"
+        },
+        {
+          "suit": "D",
+          "value": "2"
+        },
+        {
+          "suit": "C",
+          "value": "J"
+        },
+        {
+          "suit": "D",
+          "value": "3"
+        },
+        {
+          "suit": "S",
+          "value": "5"
+        },
+        {
+          "suit": "H",
+          "value": "8"
+        },
+        {
+          "suit": "D",
+          "value": "6"
+        },
+        {
+          "suit": "S",
+          "value": "Q"
+        },
+        {
+          "suit": "H",
+          "value": "A"
+        }
+      ],
+      "dealer": {
+        "hand": [
+          {
+            "value": "10",
+            "suit": "S"
+          },
+          {
+            "value": "7",
+            "suit": "S"
+          }
+        ],
+        "busted": false,
+        "maxHealth": 24,
+        "health": 0,
+        "attackDamage": 0,
+        "isBoss": true,
+        "archetypeId": "crusher",
+        "name": "Dealer"
+      },
+      "roundBanner": {
+        "text": "You Win!",
+        "type": "win",
+        "until": 1781039844191
+      },
+      "autoNextTimeout": null,
+      "blackjackTimeout": null,
+      "turnTimeout": null,
+      "turnOrder": [
+        "z2gMdn6ilTEGV21xAAAD"
+      ],
+      "currentTurnIndex": 0,
+      "lastRoundSummary": {
+        "chapter": 1,
+        "roundInChapter": 1,
+        "roundsLost": 0,
+        "roundWon": true,
+        "roundDraw": false,
+        "dealerScore": 17,
+        "dealerHealthAfter": 0,
+        "results": [
+          {
+            "name": "Pphasebmq754x7sg71c",
+            "result": "win",
+            "score": 19,
+            "handCount": 1,
+            "hp": 30,
+            "attackDamage": 5,
+            "mana": 6
+          }
+        ],
+        "resolvedAt": 1781039842192,
+        "playerLost": false
+      },
+      "runResult": null,
+      "shopSeed": 0,
+      "dealerHoleRevealed": false
+    },
+    "playerRun": {
+      "hand": [
+        {
+          "value": "10",
+          "suit": "S"
+        },
+        {
+          "value": "9",
+          "suit": "S"
+        }
+      ],
+      "standing": true,
+      "busted": false,
+      "handMultiplier": 1,
+      "handActionCount": 0,
+      "resolvedHands": [],
+      "pendingSplitHands": [],
+      "splitActive": false,
+      "tempShield": 0,
+      "usedManaSurge": false,
+      "usedAbilityThisHand": false,
+      "usedArcaneDrawThisHand": false,
+      "manaSpentThisHand": 0,
+      "emberStrikeActive": false,
+      "siphonStrikeActive": false,
+      "focusSigilActive": false,
+      "tranceStacks": 0,
+      "unlockedAbilities": [],
+      "pendingBlessingOptions": [
+        {
+          "id": "focusSigil",
+          "name": "Focus Sigil",
+          "description": "Unlock active: Empower this hand with extra combo damage if you win."
+        },
+        {
+          "id": "evilBong",
+          "name": "Evil Bong",
+          "description": "Unlock active: Transmute the dealer's hidden card into a 4."
+        },
+        {
+          "id": "siphonStrike",
+          "name": "Siphon Strike",
+          "description": "Unlock active: Gain +6 Shield now. If you win, heal 6 and deal bonus damage."
+        }
+      ],
+      "pendingShopChoices": 0,
+      "pendingShopOptions": [],
+      "relics": [
+        "kingEtcher"
+      ],
+      "relicEffects": {
+        "openingAceForge": false,
+        "cardUpgradeCharges": 2
+      },
+      "health": 30,
+      "maxHealth": 30,
+      "attackDamage": 5,
+      "mana": 6,
+      "maxMana": 6,
+      "xp": 5,
+      "level": 1,
+      "xpToNext": 10,
+      "handsPlayed": 1,
+      "pendingStatChoices": 0,
+      "pendingBlessingChoices": 1,
+      "alive": true,
+      "levelChoiceTimeout": null
+    }
   }
 }

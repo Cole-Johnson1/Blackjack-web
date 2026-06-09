@@ -301,6 +301,11 @@ const loginAttempts = new Map();
 const players = {};
 const rooms = new Map();
 
+const LOGIN_RATE_LIMIT = {
+    maxFailedAttempts: 8,
+    lockoutMinutes: 5
+};
+
 let dbPool = null;
 const persistenceState = {
     initialized: false,
@@ -1340,7 +1345,10 @@ function recordLoginAttempt(ip) {
     const entry = loginAttempts.get(ip);
 
     if (!entry || entry.resetAt < now) {
-        loginAttempts.set(ip, { count: 1, resetAt: now + 15 * 60 * 1000 });
+        loginAttempts.set(ip, {
+            count: 1,
+            resetAt: now + (LOGIN_RATE_LIMIT.lockoutMinutes * 60 * 1000)
+        });
         return;
     }
 
@@ -1354,7 +1362,7 @@ function isRateLimited(ip) {
         return false;
     }
 
-    return entry.count >= 5;
+    return entry.count >= LOGIN_RATE_LIMIT.maxFailedAttempts;
 }
 
 function clearLoginAttempts(ip) {
@@ -3346,7 +3354,9 @@ app.post("/api/login", async (req, res) => {
     const ip = req.socket.remoteAddress || "unknown";
 
     if (isRateLimited(ip)) {
-        return res.status(429).json({ error: "Too many failed attempts. Try again in 15 minutes." });
+        return res.status(429).json({
+            error: `Too many failed attempts. Try again in ${LOGIN_RATE_LIMIT.lockoutMinutes} minutes.`
+        });
     }
 
     const { username, pin, rememberLogin } = req.body || {};
