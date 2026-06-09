@@ -286,5 +286,350 @@
       "alive": true,
       "levelChoiceTimeout": null
     }
+  },
+  "Admin": {
+    "updatedAt": 1781029052957,
+    "game": {
+      "runActive": true,
+      "phase": "round-over",
+      "chapter": 2,
+      "roundInChapter": 0,
+      "totalRoundsPlayed": 11,
+      "roundsLost": 5,
+      "dealerTier": 2,
+      "deck": [
+        {
+          "suit": "D",
+          "value": "Q"
+        },
+        {
+          "suit": "S",
+          "value": "6"
+        },
+        {
+          "suit": "H",
+          "value": "8"
+        },
+        {
+          "suit": "H",
+          "value": "J"
+        },
+        {
+          "suit": "S",
+          "value": "K"
+        },
+        {
+          "suit": "C",
+          "value": "8"
+        },
+        {
+          "suit": "C",
+          "value": "4"
+        },
+        {
+          "suit": "S",
+          "value": "A"
+        },
+        {
+          "suit": "D",
+          "value": "5"
+        },
+        {
+          "suit": "C",
+          "value": "K"
+        },
+        {
+          "suit": "C",
+          "value": "A"
+        },
+        {
+          "suit": "D",
+          "value": "7"
+        },
+        {
+          "suit": "C",
+          "value": "J"
+        },
+        {
+          "suit": "H",
+          "value": "5"
+        },
+        {
+          "suit": "C",
+          "value": "Q"
+        },
+        {
+          "suit": "D",
+          "value": "6"
+        },
+        {
+          "suit": "S",
+          "value": "9"
+        },
+        {
+          "suit": "D",
+          "value": "A"
+        },
+        {
+          "suit": "D",
+          "value": "4"
+        },
+        {
+          "suit": "D",
+          "value": "10"
+        },
+        {
+          "suit": "H",
+          "value": "K"
+        },
+        {
+          "suit": "C",
+          "value": "7"
+        },
+        {
+          "suit": "S",
+          "value": "10"
+        },
+        {
+          "suit": "C",
+          "value": "6"
+        },
+        {
+          "suit": "D",
+          "value": "J"
+        },
+        {
+          "suit": "H",
+          "value": "2"
+        },
+        {
+          "suit": "H",
+          "value": "A"
+        },
+        {
+          "suit": "S",
+          "value": "5"
+        },
+        {
+          "suit": "H",
+          "value": "6"
+        },
+        {
+          "suit": "S",
+          "value": "2"
+        },
+        {
+          "suit": "D",
+          "value": "8"
+        },
+        {
+          "suit": "C",
+          "value": "5"
+        },
+        {
+          "suit": "H",
+          "value": "Q"
+        },
+        {
+          "suit": "C",
+          "value": "2"
+        },
+        {
+          "suit": "H",
+          "value": "7"
+        },
+        {
+          "suit": "D",
+          "value": "9"
+        },
+        {
+          "suit": "C",
+          "value": "9"
+        },
+        {
+          "suit": "S",
+          "value": "7"
+        },
+        {
+          "suit": "H",
+          "value": "9"
+        },
+        {
+          "suit": "D",
+          "value": "2"
+        },
+        {
+          "suit": "S",
+          "value": "8"
+        },
+        {
+          "suit": "D",
+          "value": "3"
+        },
+        {
+          "suit": "S",
+          "value": "J"
+        },
+        {
+          "suit": "C",
+          "value": "10"
+        },
+        {
+          "suit": "H",
+          "value": "3"
+        },
+        {
+          "suit": "S",
+          "value": "4"
+        }
+      ],
+      "dealer": {
+        "hand": [
+          {
+            "suit": "H",
+            "value": "10"
+          },
+          {
+            "suit": "H",
+            "value": "4"
+          },
+          {
+            "suit": "D",
+            "value": "K"
+          }
+        ],
+        "busted": true,
+        "maxHealth": 28,
+        "health": 0,
+        "attackDamage": 5,
+        "isBoss": false,
+        "archetypeId": "crusher",
+        "name": "Crusher Dealer"
+      },
+      "roundBanner": {
+        "text": "You Win!",
+        "type": "win",
+        "until": 1781029054956
+      },
+      "autoNextTimeout": null,
+      "blackjackTimeout": null,
+      "turnTimeout": null,
+      "turnOrder": [
+        "lWRLgLG8eNpOU2JbAAAB"
+      ],
+      "currentTurnIndex": 1,
+      "lastRoundSummary": {
+        "chapter": 2,
+        "roundInChapter": 0,
+        "roundsLost": 5,
+        "roundWon": true,
+        "roundDraw": false,
+        "dealerScore": 24,
+        "dealerHealthAfter": 0,
+        "results": [
+          {
+            "name": "Admin",
+            "result": "win",
+            "score": 16,
+            "handCount": 1,
+            "hp": 5,
+            "attackDamage": 7,
+            "mana": 6
+          }
+        ],
+        "resolvedAt": 1781029052957,
+        "playerLost": false
+      },
+      "runResult": null,
+      "shopSeed": 0
+    },
+    "playerRun": {
+      "hand": [
+        {
+          "suit": "S",
+          "value": "3"
+        },
+        {
+          "suit": "C",
+          "value": "3"
+        },
+        {
+          "suit": "S",
+          "value": "Q"
+        }
+      ],
+      "standing": true,
+      "busted": false,
+      "handMultiplier": 1,
+      "handActionCount": 1,
+      "resolvedHands": [
+        {
+          "cards": [
+            {
+              "suit": "S",
+              "value": "3"
+            },
+            {
+              "suit": "C",
+              "value": "3"
+            },
+            {
+              "suit": "S",
+              "value": "Q"
+            }
+          ],
+          "busted": false,
+          "multiplier": 1
+        }
+      ],
+      "pendingSplitHands": [],
+      "splitActive": false,
+      "tempShield": 0,
+      "usedManaSurge": false,
+      "usedAbilityThisHand": false,
+      "usedArcaneDrawThisHand": false,
+      "manaSpentThisHand": 0,
+      "emberStrikeActive": false,
+      "siphonStrikeActive": false,
+      "focusSigilActive": false,
+      "tranceStacks": 0,
+      "unlockedAbilities": [],
+      "pendingBlessingOptions": [
+        {
+          "id": "battleTrance",
+          "name": "Battle Trance",
+          "description": "Unlock passive: Passive: using active abilities builds Trance stacks (+20% win damage each)."
+        },
+        {
+          "id": "splitTorrent",
+          "name": "Split Torrent",
+          "description": "Unlock passive: Passive: split-hand wins unleash extra combo strikes."
+        },
+        {
+          "id": "focusSigil",
+          "name": "Focus Sigil",
+          "description": "Unlock active: Empower this hand with extra combo damage if you win."
+        }
+      ],
+      "pendingShopChoices": 0,
+      "pendingShopOptions": [],
+      "relics": [],
+      "relicEffects": {
+        "openingAceForge": false,
+        "cardUpgradeCharges": 0
+      },
+      "health": 5,
+      "maxHealth": 30,
+      "attackDamage": 7,
+      "mana": 6,
+      "maxMana": 6,
+      "xp": 0,
+      "level": 3,
+      "xpToNext": 20,
+      "pendingStatChoices": 1,
+      "pendingBlessingChoices": 2,
+      "alive": true,
+      "levelChoiceTimeout": null
+    }
   }
 }

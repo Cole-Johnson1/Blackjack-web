@@ -74,6 +74,37 @@ If you still want browser mode for testing:
 
 The server already reads process.env.PORT, so it is deploy-ready.
 
+## Database Tables (PostgreSQL)
+
+SmackJack now includes a PostgreSQL schema for persistent account/game storage.
+
+### Tables
+
+- `accounts`: account credentials, admin flags, progression, and avatar state
+- `profiles`: leaderboard/profile stats
+- `solo_runs`: saved solo run state blobs
+- `game_runs`: run history records
+
+### Setup Commands
+
+1. Set `DATABASE_URL` to your Postgres connection string.
+2. Initialize tables:
+
+   npm run db:init
+
+3. Migrate existing JSON data into DB:
+
+   npm run db:sync
+
+### Render Notes
+
+1. Add a Render Postgres database.
+2. Add `DATABASE_URL` to your Web Service environment variables.
+3. Run `npm run db:init` once against production.
+4. Run `npm run db:sync` once to import current data files.
+
+These scripts are idempotent: you can rerun them safely.
+
 ## APIs
 
 - GET /api/status: basic server/game status

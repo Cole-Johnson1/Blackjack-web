@@ -322,13 +322,13 @@
   "Admin": {
     "name": "Admin",
     "balance": 1000,
-    "wins": 0,
+    "wins": 1,
     "losses": 1,
     "pushes": 0,
-    "gamesPlayed": 1,
+    "gamesPlayed": 2,
     "totalEarnings": 0,
-    "runsCompleted": 0,
-    "highestChapter": 1
+    "runsCompleted": 1,
+    "highestChapter": 2
   },
   "Dispumq6yc89c0mxr": {
     "name": "Dispumq6yc89c0mxr",
@@ -365,6 +365,50 @@
   },
   "LBboardmq6yc9ndiurl": {
     "name": "LBboardmq6yc9ndiurl",
+    "balance": 1000,
+    "wins": 0,
+    "losses": 0,
+    "pushes": 0,
+    "gamesPlayed": 0,
+    "totalEarnings": 0,
+    "runsCompleted": 0,
+    "highestChapter": 1
+  },
+  "Dispumq6ynl6c0755": {
+    "name": "Dispumq6ynl6c0755",
+    "balance": 1000,
+    "wins": 0,
+    "losses": 0,
+    "pushes": 0,
+    "gamesPlayed": 0,
+    "totalEarnings": 0,
+    "runsCompleted": 0,
+    "highestChapter": 1
+  },
+  "Renacctmq6ynlm8ed1s": {
+    "name": "Renacctmq6ynlm8ed1s",
+    "balance": 1000,
+    "wins": 0,
+    "losses": 0,
+    "pushes": 0,
+    "gamesPlayed": 0,
+    "totalEarnings": 0,
+    "runsCompleted": 0,
+    "highestChapter": 1
+  },
+  "Plockmq6ynmap0994": {
+    "name": "Plockmq6ynmap0994",
+    "balance": 1000,
+    "wins": 0,
+    "losses": 0,
+    "pushes": 0,
+    "gamesPlayed": 0,
+    "totalEarnings": 0,
+    "runsCompleted": 0,
+    "highestChapter": 1
+  },
+  "LBboardmq6ynmkict6h": {
+    "name": "LBboardmq6ynmkict6h",
     "balance": 1000,
     "wins": 0,
     "losses": 0,
