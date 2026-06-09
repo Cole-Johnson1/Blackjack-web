@@ -1417,6 +1417,7 @@ function makePlayerRunState() {
         xp: 0,
         level: 1,
         xpToNext: calculateXpToNext(1),
+        handsPlayed: 0,
         pendingStatChoices: 0,
         pendingBlessingChoices: 0,
         alive: true
@@ -2625,8 +2626,6 @@ function updateRunOver(room, reason) {
         }
 
         const profile = getOrCreateProfile(player.name);
-        profile.gamesPlayed += 1;
-        profile.losses += 1;
 
         const account = getAccountForPlayer(player);
         if (account) {
@@ -2713,6 +2712,7 @@ function settleRound(room) {
     let losses = 0;
     const results = [];
     let accountProgressUpdated = false;
+    let profileProgressUpdated = false;
 
     activePlayers.forEach(player => {
         const roundOutcome = resolvePlayerRoundOutcome(
@@ -2721,6 +2721,7 @@ function settleRound(room) {
             room.game.dealer.attackDamage
         );
         const { handOutcomes, winHands, lossHands, blackjackHands } = roundOutcome;
+        const handPushes = Math.max(0, handOutcomes.length - winHands.length - lossHands.length);
 
         let result = "push";
         let score = handOutcomes.length > 0 ? Math.max(...handOutcomes.map(x => x.score)) : 0;
@@ -2764,6 +2765,22 @@ function settleRound(room) {
             grantAccountXp(account, Math.round(baseAccountXp * runLengthMultiplier));
             accountProgressUpdated = true;
         }
+
+        const profile = getOrCreateProfile(player.name);
+        profile.wins += winHands.length;
+        profile.losses += lossHands.length;
+        profile.pushes += handPushes;
+        profile.gamesPlayed += handOutcomes.length;
+        player.run.handsPlayed = Math.max(0, Number(player.run.handsPlayed || 0)) + handOutcomes.length;
+        profile.highestChapter = Math.max(Number(profile.highestChapter || 0), player.run.handsPlayed);
+        profileProgressUpdated = true;
+
+        player.stats = {
+            wins: profile.wins,
+            losses: profile.losses,
+            pushes: profile.pushes,
+            gamesPlayed: profile.gamesPlayed
+        };
 
         results.push({
             name: player.name,
@@ -2838,9 +2855,6 @@ function settleRound(room) {
 
             const profile = getOrCreateProfile(player.name);
             profile.runsCompleted += 1;
-            profile.highestChapter = Math.max(profile.highestChapter || 1, room.game.chapter);
-            profile.wins += 1;
-            profile.gamesPlayed += 1;
             player.stats = {
                 wins: profile.wins,
                 losses: profile.losses,
@@ -2848,7 +2862,9 @@ function settleRound(room) {
                 gamesPlayed: profile.gamesPlayed
             };
         });
+    }
 
+    if (profileProgressUpdated) {
         saveProfiles();
         io.emit("leaderboardUpdated", getSortedLeaderboard());
     }
